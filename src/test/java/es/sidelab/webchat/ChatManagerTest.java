@@ -2,7 +2,14 @@ package es.sidelab.webchat;
 
 import static org.junit.Assert.assertTrue;
 
+import java.util.ConcurrentModificationException;
 import java.util.Objects;
+import java.util.concurrent.CompletionService;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorCompletionService;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
@@ -15,27 +22,77 @@ import es.codeurjc.webchat.User;
 public class ChatManagerTest {
 
 	@Test
-	public void newChat() throws InterruptedException, TimeoutException {
+	public void newChat() throws InterruptedException, TimeoutException, ExecutionException {
 
 		// Crear el chat Manager
-		ChatManager chatManager = new ChatManager(5);
+		final ChatManager chatManager = new ChatManager(50);
 
-		// Crear un usuario que guarda en chatName el nombre del nuevo chat
-		final String[] chatName = new String[1];
+		int numThreads = 4;
 
-		chatManager.newUser(new TestUser("user") {
-			public void newChat(Chat chat) {
-				chatName[0] = chat.getName();
+		ExecutorService executor = Executors.newFixedThreadPool(numThreads);
+		CompletionService<String> completionService = new ExecutorCompletionService<>(executor);
+		final String[] chatName = new String[5];
+
+
+		for (int i = 0; i < numThreads; ++i) {
+			final int count = i;
+			completionService.submit(()->simulateUser(count, chatName, chatManager));
+		}
+
+
+		for (int i = 0; i < numThreads; ++i) {
+			try {
+				// Crear un usuario que guarda en chatName el nombre del nuevo chat		
+				Future<String> f = completionService.take();
+				String returnedValue = f.get();
+				System.out.println("The returned value from the Thread is: "+returnedValue);
+			} catch (ConcurrentModificationException e) {
+				System.out.println("Exception: " + e.toString());
+				assertTrue("Exception received" + e.toString(), false);
+			} catch (InterruptedException e) {
+				System.out.println("Exception: " + e.toString());
+				assertTrue("Exception received" + e.toString(), false);
+			} catch (ExecutionException e) {
+				System.out.println("Exception: " + e.toString());
+				e.printStackTrace();
+				assertTrue("Exception received" + e.toString(), false);
 			}
-		});
+		}
 
-		// Crear un nuevo chat en el chatManager
-		chatManager.newChat("Chat", 5, TimeUnit.SECONDS);
+		executor.shutdown();
 
+		System.out.println(chatName[0] + " " + chatName[1] + " " + chatName[2] + " " + chatName[3] + " " + chatName[4]);
 		// Comprobar que el chat recibido en el método 'newChat' se llama 'Chat'
-		assertTrue("The method 'newChat' should be invoked with 'Chat', but the value is "
-				+ chatName[0], Objects.equals(chatName[0], "Chat"));
+		for (int i = 0; i < 5; i++) {
+			assertTrue("The method 'newChat' should be invoked with 'Chat"+i+"', but the value is "
+					+ chatName[i], Objects.equals(chatName[i], "Chat"+i));
+		}
+
 	}
+
+
+	private String simulateUser(int count, String[] chatName, ChatManager chatManager) throws 
+								InterruptedException, TimeoutException {
+		TestUser user = new TestUser("user"+Thread.currentThread().getName()) {
+			public void newChat(Chat chat) {
+				chatName[count] = chat.getName();
+			}
+		};
+		chatManager.newUser(user);
+
+		for (int i = 0; i < 5; ++i) {
+			// Crear un nuevo chat en el chatManager
+			Chat chat = chatManager.newChat("Chat"+i, 5, TimeUnit.SECONDS);
+			chat.addUser(user);
+			for (User userInChat: chat.getUsers()) {
+				System.out.println("User: "+ userInChat.getName() + " in chat: " + chat.getName());
+			}
+		}
+		return Thread.currentThread().getName();
+		
+	}
+
+	
 
 	@Test
 	public void newUserInChat() throws InterruptedException, TimeoutException {
