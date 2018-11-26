@@ -2,6 +2,7 @@ package es.sidelab.webchat;
 
 import static org.junit.Assert.assertTrue;
 
+import java.util.Arrays;
 import java.util.ConcurrentModificationException;
 import java.util.Objects;
 import java.util.concurrent.CompletionService;
@@ -30,8 +31,8 @@ public class ChatManagerTest {
 		int numThreads = 4;
 
 		ExecutorService executor = Executors.newFixedThreadPool(numThreads);
-		CompletionService<String> completionService = new ExecutorCompletionService<>(executor);
-		final String[] chatName = new String[5];
+		CompletionService<String[]> completionService = new ExecutorCompletionService<>(executor);
+		final String[] chatName = new String[4];
 
 
 		for (int i = 0; i < numThreads; ++i) {
@@ -43,9 +44,9 @@ public class ChatManagerTest {
 		for (int i = 0; i < numThreads; ++i) {
 			try {
 				// Crear un usuario que guarda en chatName el nombre del nuevo chat		
-				Future<String> f = completionService.take();
-				String returnedValue = f.get();
-				System.out.println("The returned value from the Thread is: "+returnedValue);
+				Future<String[]> f = completionService.take();
+				String[] returnedValue = f.get();
+				System.out.println("The returned value from the Thread is: "+ Arrays.asList(returnedValue).toString());
 			} catch (ConcurrentModificationException e) {
 				System.out.println("Exception: " + e.toString());
 				assertTrue("Exception received" + e.toString(), false);
@@ -61,34 +62,46 @@ public class ChatManagerTest {
 
 		executor.shutdown();
 
-		System.out.println(chatName[0] + " " + chatName[1] + " " + chatName[2] + " " + chatName[3] + " " + chatName[4]);
+		System.out.println(chatName[0] + " " + chatName[1] + " " + chatName[2] + " " + chatName[3]);
 		// Comprobar que el chat recibido en el método 'newChat' se llama 'Chat'
-		for (int i = 0; i < 5; i++) {
-			assertTrue("The method 'newChat' should be invoked with 'Chat"+i+"', but the value is "
-					+ chatName[i], Objects.equals(chatName[i], "Chat"+i));
+		for (int i = 0; i < 4; i++) {
+			assertTrue("The method 'newChat' should be invoked with 'Chat0Chat1Chat2Chat3Chat4', but the value is "
+					+ chatName[i], Objects.equals(chatName[i], "Chat0Chat1Chat2Chat3Chat4"));
 		}
 
 	}
 
 
-	private String simulateUser(int count, String[] chatName, ChatManager chatManager) throws 
+	private String[] simulateUser(int count, String[] chatName, ChatManager chatManager) throws 
 								InterruptedException, TimeoutException {
+		final int numIterations = 5;
+		String[] chatCreated = new String[numIterations];
+		
 		TestUser user = new TestUser("user"+Thread.currentThread().getName()) {
 			public void newChat(Chat chat) {
-				chatName[count] = chat.getName();
+				if ( null != chatName[count]) {
+					chatName[count] = chatName[count]+chat.getName();
+				}
+				else {
+					chatName[count] = chat.getName();
+				}
+				System.out.println("Anonymous class: "+count+" new chat: "+chat.getName() + " created by user: " + this.name);
 			}
 		};
+		
 		chatManager.newUser(user);
 
-		for (int i = 0; i < 5; ++i) {
+		for (int i = 0; i < numIterations; i++) {
 			// Crear un nuevo chat en el chatManager
 			Chat chat = chatManager.newChat("Chat"+i, 5, TimeUnit.SECONDS);
 			chat.addUser(user);
 			for (User userInChat: chat.getUsers()) {
+				chatCreated[i] = chat.getName();
 				System.out.println("User: "+ userInChat.getName() + " in chat: " + chat.getName());
 			}
 		}
-		return Thread.currentThread().getName();
+		return chatCreated;
+		//return Thread.currentThread().getName();
 		
 	}
 
@@ -120,6 +133,5 @@ public class ChatManagerTest {
 
 		assertTrue("Notified new user '" + newUser[0] + "' is not equal than user name 'user2'",
 				"user2".equals(newUser[0]));
-
 	}
 }
