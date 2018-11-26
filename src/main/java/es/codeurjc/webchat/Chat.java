@@ -2,15 +2,16 @@ package es.codeurjc.webchat;
 
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
 public class Chat {
 
 	private String name;
-	private Map<String, User> users = new HashMap<>();
-
 	private ChatManager chatManager;
+
+	private ConcurrentMap<String, User> users = new ConcurrentHashMap<>();
+
 
 	public Chat(ChatManager chatManager, String name) {
 		this.chatManager = chatManager;
@@ -22,7 +23,7 @@ public class Chat {
 	}
 
 	public void addUser(User user) {
-		users.put(user.getName(), user);
+		users.putIfAbsent(user.getName(), user);
 		for(User u : users.values()){
 			if (u != user) {
 				u.newUserInChat(this, user);
@@ -31,7 +32,12 @@ public class Chat {
 	}
 
 	public void removeUser(User user) {
-		users.remove(user.getName());
+		try {
+			users.remove(user.getName(), user);
+		} catch (Exception e) {
+			e.printStackTrace();
+			return;
+		}
 		for(User u : users.values()){
 			u.userExitedFromChat(this, user);
 		}
@@ -42,7 +48,7 @@ public class Chat {
 	}
 
 	public User getUser(String name) {
-		return users.get(name);
+		return users.getOrDefault(name, null);
 	}
 
 	public void sendMessage(User user, String message) {
