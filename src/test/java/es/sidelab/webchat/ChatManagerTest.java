@@ -61,6 +61,8 @@ public class ChatManagerTest {
 		}
 
 		executor.shutdown();
+		
+		executor.awaitTermination(10, TimeUnit.SECONDS);
 
 		System.out.println(chatName[0] + " " + chatName[1] + " " + chatName[2] + " " + chatName[3]);
 		// Comprobar que el chat recibido en el método 'newChat' se llama 'Chat'
@@ -85,7 +87,7 @@ public class ChatManagerTest {
 				else {
 					chatName[count] = chat.getName();
 				}
-				System.out.println("Anonymous class: "+count+" new chat: "+chat.getName() + " created by user: " + this.name);
+				//System.out.println("Test("+Thread.currentThread().getName()+"): TestUser class for user: " + this.name +", new chat created: "+chat.getName());
 			}
 		};
 		
@@ -97,7 +99,7 @@ public class ChatManagerTest {
 			chat.addUser(user);
 			for (User userInChat: chat.getUsers()) {
 				chatCreated[i] = chat.getName();
-				System.out.println("User: "+ userInChat.getName() + " in chat: " + chat.getName());
+				//System.out.println("Test("+Thread.currentThread().getName()+"): User: "+ userInChat.getName() + " in chat: " + chat.getName());
 			}
 		}
 		return chatCreated;
@@ -110,6 +112,7 @@ public class ChatManagerTest {
 	@Test
 	public void newUserInChat() throws InterruptedException, TimeoutException {
 
+		System.out.println("==============NEW test=====================");
 		ChatManager chatManager = new ChatManager(5);
 
 		final String[] newUser = new String[1];
