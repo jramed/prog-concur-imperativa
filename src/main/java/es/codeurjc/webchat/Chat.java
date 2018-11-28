@@ -23,10 +23,12 @@ public class Chat {
 	}
 
 	public void addUser(User user) {
-		users.putIfAbsent(user.getName(), user);
-		for(User u : users.values()){
-			if (u != user) {
-				u.newUserInChat(this, user);
+		User previousUser = users.putIfAbsent(user.getName(), user);
+		synchronized (users) {
+			for(User u : users.values()){
+				if (u != user) {
+					u.newUserInChat(this, user);
+				}
 			}
 		}
 	}
@@ -52,8 +54,10 @@ public class Chat {
 	}
 
 	public void sendMessage(User user, String message) {
-		for(User u : users.values()){
-			u.newMessage(this, user, message);
+		synchronized (users) {
+			for(User u : users.values()){
+				u.newMessage(this, user, message);
+			}
 		}
 	}
 

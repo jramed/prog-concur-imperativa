@@ -28,31 +28,51 @@ public class ChatManager {
 	public Chat newChat(String name, long timeout, TimeUnit unit) throws InterruptedException,
 			TimeoutException {
 
-		//TODO add mutual exclusion protection to ensure the size is not changed
-		//a new user could be been added while the checking is done	
-		if (chats.size() == maxChats) {
+		//A new user could be been added while the checking is done
+		//
+		boolean mayThrow = false;
+		//synchronized (chats) {
+			mayThrow = chats.size() == maxChats ? true :false;
+		//}
+		
+		//If this part in synchronized as well, the exception throwing can consume some time
+		//It is better to have it out of the mutual exclusion zone even if the situation 
+		//can change between the checking and the exception throw. However, with this same
+		//point of view, there is no need for synchronize the reading of the size.
+		if (mayThrow) {
 			throw new TimeoutException("There is no enought capacity to create a new chat");
 		}
 
-		//TODO add mutal exclusion protection
-		if(chats.containsKey(name)){
-			return chats.get(name);
-		} else {
-			Chat newChat = new Chat(this, name);
-			//TODO add mutual exclusion protection
-			chats.put(name, newChat);
-			
-			//TODO should it be included in a mutual exclusion zone?
-			for(User user : users.values()){
-				user.newChat(newChat);
-			}
 
-			return newChat;
+		Chat theChat = null;
+		boolean isChatCreated = false;
+		synchronized (chats) {
+			if(chats.containsKey(name)){
+				System.out.println(Thread.currentThread().getName()+"Chat: "+name+" already created." + " In thread: "+Thread.currentThread().getName());
+				theChat = chats.get(name);
+			} else {
+				theChat = new Chat(this, name);
+				//No need to use putIfAbsent because it is synchronized
+				chats.put(name, theChat);
+				isChatCreated = true;
+				System.out.println(Thread.currentThread().getName()+"Creating chat: "+name+ " In thread: "+Thread.currentThread().getName());
+			}
 		}
+		
+		if (isChatCreated) {
+			synchronized (users) {
+				for(User user : users.values()){
+					System.out.println("Sent message or new chat to user: "+ user.getName());
+					user.newChat(theChat);
+				}
+			}		
+		}
+		
+		return theChat;
 	}
 
 	public void closeChat(Chat chat) {
-		//TODO add mutual exclusion protection
+		//The remove operation is performed atomically
 		Chat removedChat = chats.remove(chat.getName());
 		if (removedChat == null) {
 			throw new IllegalArgumentException("Trying to remove an unknown chat with name \'"
@@ -60,8 +80,10 @@ public class ChatManager {
 		}
 
 		//TODO should it be included in a mutual exclusion zone?
-		for(User user : users.values()){
-			user.chatClosed(removedChat);
+		synchronized (users) {
+			for(User user : users.values()){
+				user.chatClosed(removedChat);
+			}
 		}
 	}
 
