@@ -19,6 +19,7 @@ import org.junit.Test;
 import es.codeurjc.webchat.Chat;
 import es.codeurjc.webchat.ChatManager;
 import es.codeurjc.webchat.User;
+import es.codeurjc.webchat.PrintlnI;
 
 public class ChatManagerTest {
 
@@ -38,6 +39,7 @@ public class ChatManagerTest {
 		for (int i = 0; i < numThreads; ++i) {
 			final int count = i;
 			completionService.submit(()->simulateUser(count, chatName, chatManager));
+			PrintlnI.initPerThread();
 		}
 
 

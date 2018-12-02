@@ -1,6 +1,7 @@
 package es.sidelab.webchat;
 
 import es.codeurjc.webchat.Chat;
+import es.codeurjc.webchat.PrintlnI;
 import es.codeurjc.webchat.User;
 
 public class TestUser implements User {
@@ -32,7 +33,8 @@ public class TestUser implements User {
 
 	@Override
 	public void newUserInChat(Chat chat, User user) {
-		System.out.println("New user " + user.getName() + " in chat " + chat.getName());
+		//System.out.println(this.name + ": New user " + user.getName() + " in chat " + chat.getName());
+		PrintlnI.printlnI(this.name + ": New user " + user.getName() + " in chat " + chat.getName(),"");
 	}
 
 	@Override

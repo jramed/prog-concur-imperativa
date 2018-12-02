@@ -24,6 +24,9 @@ public class Chat {
 
 	public void addUser(User user) {
 		User previousUser = users.putIfAbsent(user.getName(), user);
+		if (previousUser != null) {
+			PrintlnI.printlnI("There was a previous user with the name: " + user.getName(), "");
+		}
 		synchronized (users) {
 			for(User u : users.values()){
 				if (u != user) {
