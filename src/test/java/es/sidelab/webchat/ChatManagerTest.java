@@ -89,6 +89,9 @@ public class ChatManagerTest {
 				else {
 					chatName[count] = chat.getName();
 				}
+				PrintlnI.printlnI("TestUser class for user: " + this.name +", new chat created: "+chat.getName() +" for thread number: " +count, "");
+				PrintlnI.printlnI("TestUser class for user: " + chatName[count], "");
+
 				//System.out.println("Test("+Thread.currentThread().getName()+"): TestUser class for user: " + this.name +", new chat created: "+chat.getName());
 			}
 		};

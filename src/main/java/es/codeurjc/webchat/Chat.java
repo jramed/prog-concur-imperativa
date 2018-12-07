@@ -57,11 +57,11 @@ public class Chat {
 			CustomPair pair = new CustomPair(executor,completionService);
 			taskPerUser.putIfAbsent(user.getName(), pair);
 		}
-		synchronized (users) {
-			for(User u : users.values()){
-				if (u != user) {
-					u.newUserInChat(this, user);
-				}
+
+		// should I use an EM here?
+		for(User u : users.values()){
+			if (u != user) {
+				taskPerUser.get(user.getName()).getCompletionServices().submit(()->newUserInChat(u, user));
 			}
 		}
 	}
@@ -73,16 +73,16 @@ public class Chat {
 			e.printStackTrace();
 			return;
 		}
+
+		for(User u : users.values()){
+			taskPerUser.get(user.getName()).getCompletionServices().submit(()->userExitedFromChat(u, user));
+		}
 		
 		CustomPair pair = taskPerUser.get(user.getName());
 		ExecutorService executor = pair.getExecutor();
 		executor.shutdown();
 		executor.awaitTermination(10, TimeUnit.SECONDS);
 		taskPerUser.remove(user.getName(), pair);
-
-		for(User u : users.values()){
-			u.userExitedFromChat(this, user);
-		}
 	}
 
 	public Collection<User> getUsers() {
@@ -96,7 +96,7 @@ public class Chat {
 	public void sendMessage(User user, String message) {
 		synchronized (users) {
 			for(User u : users.values()){
-				taskPerUser.get(user.getName()).getCompletionServices().submit(()->sendMessageToUser(u, message));
+				taskPerUser.get(user.getName()).getCompletionServices().submit(()->sendMessageToUser(u, user, message));
 			}
 		}
 	}
@@ -105,8 +105,19 @@ public class Chat {
 		this.chatManager.closeChat(this);
 	}
 	
-	private String sendMessageToUser(User user, String message) {	
-		user.newMessage(this, user, message);
-		return user.getName()+message;
+	private String sendMessageToUser(User user, User userOrig, String message) {
+		user.newMessage(this, userOrig, message);
+		return user.getName()+" "+message;
 	}
+
+	private String userExitedFromChat(User user, User userExisted) {
+		user.userExitedFromChat(this, userExisted);
+		return "User "+userExisted.getName()+" existed from chat to user "+user.getName();
+	}
+
+	private String newUserInChat(User user, User userNew) {
+		user.newUserInChat(this, userNew);
+		return "New user "+userNew.getName()+" in chat to user "+user.getName();
+	}
+
 }
