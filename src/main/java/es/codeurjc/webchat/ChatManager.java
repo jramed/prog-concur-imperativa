@@ -66,7 +66,7 @@ public class ChatManager {
 				for(User user : users.values()){
 					//System.out.println("Sent message or new chat to user: "+ user.getName());
 					user.newChat(theChat);
-					PrintlnI.printlnI("Sent message of new chat: "+ theChat.getName() +" to user: "+ user.getName(),"");
+					//PrintlnI.printlnI("Sent message of new chat: "+ theChat.getName() +" to user: "+ user.getName(),"");
 				}
 			}		
 		}
