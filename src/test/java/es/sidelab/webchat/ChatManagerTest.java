@@ -11,6 +11,7 @@ import java.util.concurrent.ExecutorCompletionService;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
@@ -85,29 +86,36 @@ public class ChatManagerTest {
 		
 		TestUser user = new TestUser("user"+Thread.currentThread().getName()) {
 			public void newChat(Chat chat) {
-				if ( null != chatName[count]) {
-					chatName[count] = chatName[count]+chat.getName();
-				}
-				else {
-					chatName[count] = chat.getName();
-				}
+				//synchronized (chatName) {
+					if ( null != chatName[count]) {
+						chatName[count] = chatName[count]+chat.getName();
+					}
+					else {
+						chatName[count] = chat.getName();
+					}
+				//}
 				PrintlnI.printlnI("TestUser class for user: " + this.name +", new chat created: "+chat.getName() +" for thread number: " +count, "");
-				PrintlnI.printlnI("TestUser class for user: " + chatName[count], "");
+				PrintlnI.printlnI("TestUser class for user: " + this.name + chatName[count], "");
 
 				//System.out.println("Test("+Thread.currentThread().getName()+"): TestUser class for user: " + this.name +", new chat created: "+chat.getName());
 			}
 		};
 		
+		if (count % 2 == 0)
+		{
+			TimeUnit.MILLISECONDS.sleep(ThreadLocalRandom.current().nextInt(0, 100 + 1));
+		}
 		chatManager.newUser(user);
 
 		for (int i = 0; i < numIterations; i++) {
 			// Crear un nuevo chat en el chatManager
 			Chat chat = chatManager.newChat("Chat"+i, 5, TimeUnit.SECONDS);
 			chat.addUser(user);
-			for (User userInChat: chat.getUsers()) {
-				chatCreated[i] = chat.getName();
+			chatCreated[i] = chat.getName();
+			
+			//for (User userInChat: chat.getUsers()) {	
 				//System.out.println("Test("+Thread.currentThread().getName()+"): User: "+ userInChat.getName() + " in chat: " + chat.getName());
-			}
+			//}
 		}
 		return chatCreated;
 		//return Thread.currentThread().getName();
@@ -119,6 +127,7 @@ public class ChatManagerTest {
 	@Test
 	public void newUserInChat() throws InterruptedException, TimeoutException {
 
+		Thread.sleep(1000);
 		System.out.println("==============NEW test=====================");
 		PrintlnI.initPerThread();
 		ChatManager chatManager = new ChatManager(5);
