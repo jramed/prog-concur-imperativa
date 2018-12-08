@@ -45,12 +45,14 @@ public class ChatManagerTest {
 		}
 
 
+		String[][] returnedValues = new String[numThreads][5];
 		for (int i = 0; i < numThreads; ++i) {
 			try {
 				// Crear un usuario que guarda en chatName el nombre del nuevo chat		
 				Future<String[]> f = completionService.take();
 				String[] returnedValue = f.get();
-				System.out.println("The returned value from the Thread is: "+ Arrays.asList(returnedValue).toString());
+				returnedValues[i] = returnedValue;
+				System.out.println("The returned value from the Thread is: "+ Arrays.asList(returnedValues[i]).toString());
 			} catch (ConcurrentModificationException e) {
 				System.out.println("Exception: " + e.toString());
 				assertTrue("Exception received" + e.toString(), false);
@@ -70,9 +72,10 @@ public class ChatManagerTest {
 
 		System.out.println(chatName[0] + " " + chatName[1] + " " + chatName[2] + " " + chatName[3]);
 		// Comprobar que el chat recibido en el método 'newChat' se llama 'Chat'
+		String[] valuesToCheck = {"Chat0","Chat1","Chat2", "Chat3","Chat4"};
 		for (int i = 0; i < 4; i++) {
-			assertTrue("The method 'newChat' should be invoked with 'Chat0Chat1Chat2Chat3Chat4', but the value is "
-					+ chatName[i], Objects.equals(chatName[i], "Chat0Chat1Chat2Chat3Chat4"));
+			assertTrue("The method 'newChat' should be invoked with "+Arrays.asList(valuesToCheck).toString()+" , but the value is "
+					+ Arrays.asList(returnedValues[i]).toString(), Arrays.equals(returnedValues[i], valuesToCheck));
 		}
 
 		PrintlnI.reset();
