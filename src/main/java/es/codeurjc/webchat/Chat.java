@@ -8,6 +8,7 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutorCompletionService;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 
 public class Chat {
@@ -115,8 +116,10 @@ public class Chat {
 		return "User "+userExisted.getName()+" existed from chat to user "+user.getName();
 	}
 
-	private String newUserInChat(User user, User userNew) {
+	private String newUserInChat(User user, User userNew) throws InterruptedException {
+		TimeUnit.MILLISECONDS.sleep(ThreadLocalRandom.current().nextInt(0, 500 + 1));
 		user.newUserInChat(this, userNew);
+		PrintlnI.printlnI("New user "+userNew.getName()+" in chat to user "+user.getName(),"");
 		return "New user "+userNew.getName()+" in chat to user "+user.getName();
 	}
 

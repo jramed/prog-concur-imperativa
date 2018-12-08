@@ -40,6 +40,7 @@ public class ChatManagerTest {
 			final int count = i;
 			completionService.submit(()->simulateUser(count, chatName, chatManager));
 			PrintlnI.initPerThread();
+			//Thread.sleep(300);
 		}
 
 
@@ -73,6 +74,7 @@ public class ChatManagerTest {
 					+ chatName[i], Objects.equals(chatName[i], "Chat0Chat1Chat2Chat3Chat4"));
 		}
 
+		PrintlnI.reset();
 	}
 
 
@@ -118,6 +120,7 @@ public class ChatManagerTest {
 	public void newUserInChat() throws InterruptedException, TimeoutException {
 
 		System.out.println("==============NEW test=====================");
+		PrintlnI.initPerThread();
 		ChatManager chatManager = new ChatManager(5);
 
 		final String[] newUser = new String[1];
@@ -125,6 +128,8 @@ public class ChatManagerTest {
 		TestUser user1 = new TestUser("user1") {
 			@Override
 			public void newUserInChat(Chat chat, User user) {
+				PrintlnI.printlnI("Received notification from user: "+user.getName(),"");
+				//System.out.println("Received notification from user: "+user.getName());
 				newUser[0] = user.getName();
 			}
 		};
@@ -139,6 +144,10 @@ public class ChatManagerTest {
 		chat.addUser(user1);
 		chat.addUser(user2);
 
+		//because the notification of a new user is sent from another thread
+		//that must be created, the sleep is necessary to give room enough to
+		//the new thread to be created and does it work.
+		Thread.sleep(550);
 		assertTrue("Notified new user '" + newUser[0] + "' is not equal than user name 'user2'",
 				"user2".equals(newUser[0]));
 	}
