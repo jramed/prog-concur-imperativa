@@ -60,11 +60,20 @@ public class Chat {
 		}
 
 		// should I use an EM here?
-		for(User u : users.values()){
-			if (u != user) {
-				taskPerUser.get(user.getName()).getCompletionServices().submit(()->newUserInChat(u, user));
+		//synchronized(users) {
+			for(User u : users.values()){
+				if (u.getName().equals(user.getName())) {
+					CustomPair pair = taskPerUser.get(u.getName());
+					CompletionService<String> completionService;
+					if (pair != null)
+					{
+						completionService = pair.getCompletionServices();
+						if (completionService != null)
+							completionService.submit(()->newUserInChat(u, user));
+					}
+				}
 			}
-		}
+		//}
 	}
 
 	public void removeUser(User user) throws InterruptedException {
@@ -76,7 +85,7 @@ public class Chat {
 		}
 
 		for(User u : users.values()){
-			taskPerUser.get(user.getName()).getCompletionServices().submit(()->userExitedFromChat(u, user));
+			taskPerUser.get(u.getName()).getCompletionServices().submit(()->userExitedFromChat(u, user));
 		}
 		
 		CustomPair pair = taskPerUser.get(user.getName());
@@ -95,11 +104,16 @@ public class Chat {
 	}
 
 	public void sendMessage(User user, String message) {
-		synchronized (users) {
-			for(User u : users.values()){
-				taskPerUser.get(user.getName()).getCompletionServices().submit(()->sendMessageToUser(u, user, message));
+		//synchronized (users) {
+		Collection<User> usersColl = this.getUsers();
+		for(User u : usersColl){
+			if (u != user)
+			{
+				PrintlnI.printlnI("Destination user: "+u.getName(),"");
+				taskPerUser.get(u.getName()).getCompletionServices().submit(()->sendMessageToUser(u, user, message));
 			}
 		}
+		//}
 	}
 
 	public void close() {
@@ -117,7 +131,7 @@ public class Chat {
 	}
 
 	private String newUserInChat(User user, User userNew) throws InterruptedException {
-		TimeUnit.MILLISECONDS.sleep(ThreadLocalRandom.current().nextInt(0, 500 + 1));
+		//TimeUnit.MILLISECONDS.sleep(ThreadLocalRandom.current().nextInt(0, 500 + 1));
 		user.newUserInChat(this, userNew);
 		PrintlnI.printlnI("New user "+userNew.getName()+" in chat to user "+user.getName(),"");
 		return "New user "+userNew.getName()+" in chat to user "+user.getName();
