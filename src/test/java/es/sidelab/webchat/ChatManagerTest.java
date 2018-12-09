@@ -4,7 +4,9 @@ import static org.junit.Assert.assertTrue;
 
 import java.util.Arrays;
 import java.util.ConcurrentModificationException;
+import java.util.HashSet;
 import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.CompletionService;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorCompletionService;
@@ -160,7 +162,109 @@ public class ChatManagerTest {
 		//that must be created, the sleep is necessary to give room enough to
 		//the new thread to be created and does it work.
 		Thread.sleep(550);
+		PrintlnI.reset();
 		assertTrue("Notified new user '" + newUser[0] + "' is not equal than user name 'user2'",
 				"user2".equals(newUser[0]));
+	}
+
+	@Test
+	public void parallelNotifications() throws InterruptedException, TimeoutException
+	{
+		// Crear el chat Manager
+		final ChatManager chatManager = new ChatManager(5);
+
+		int numThreads = 4;
+
+		ExecutorService executor = Executors.newFixedThreadPool(numThreads);
+		CompletionService<String> completionService = new ExecutorCompletionService<>(executor);
+		final String[] userNames = new String[numThreads];
+		PrintlnI.initPerThread();
+		Chat chat = chatManager.newChat("Chat", 5, TimeUnit.SECONDS);
+
+		for (int i = 0; i < numThreads; i++)
+		{
+			final int count = i;
+			PrintlnI.initPerThread();
+			completionService.submit(()->simulateUserParallelTest(count, userNames, chatManager, chat));
+		}
+
+		//4 thread for 4 users
+		String[] returnedValues = new String[numThreads];
+		for (int i = 0; i < numThreads; ++i) {
+			try {
+				// Crear un usuario que guarda en chatName el nombre del nuevo chat
+				Future<String> f = completionService.take();
+				String returnedValue = f.get();
+				returnedValues[i] = returnedValue;
+				System.out.println("The returned value from the Thread is: "+ Arrays.asList(returnedValues[i]).toString());
+			} catch (ConcurrentModificationException e) {
+				System.out.println("Exception: " + e.toString());
+				assertTrue("Exception received" + e.toString(), false);
+			} catch (InterruptedException e) {
+				System.out.println("Exception: " + e.toString());
+				assertTrue("Exception received" + e.toString(), false);
+			} catch (ExecutionException e) {
+				System.out.println("Exception: " + e.toString());
+				e.printStackTrace();
+				assertTrue("Exception received" + e.toString(), false);
+			}
+		}
+
+		executor.shutdown();
+
+		executor.awaitTermination(10, TimeUnit.SECONDS);
+
+		Thread.sleep(2000);
+		PrintlnI.printlnI(Arrays.asList(userNames).toString(),"");
+		// Comprobar que el chat recibido en el método 'newChat' se llama 'Chat'
+
+		Set<String> valuesToCheck = new HashSet<>();
+		for (int i = 0; i < numThreads; i++)
+		{
+			valuesToCheck.add("user"+i);
+		}
+
+		for (int i = 0; i < numThreads; i++) {
+			assertTrue("The method 'newChat' should be invoked with "+Arrays.asList(valuesToCheck).toString()+" , but the value is "
+					+ returnedValues[i], valuesToCheck.contains(returnedValues[i]));
+		}
+
+		PrintlnI.reset();
+
+		assertTrue("Still pending to be implemented", false);
+	}
+
+
+	private String simulateUserParallelTest(int count, String[] userNames, ChatManager chatManager, Chat chat) throws 
+								InterruptedException, TimeoutException {
+
+		TestUser user = new TestUser("user"+count) {
+			public void newMessage(Chat chat, User user, String message) {
+				userNames[count] = this.getName();
+				try {
+					Thread.sleep(1000);
+				} catch (InterruptedException intExcep)
+				{
+					PrintlnI.printlnI("Exception received: " + intExcep.toString(),"");
+					intExcep.printStackTrace();
+					//assertTrue("Exception received" + intExcep.toString(), false);
+				}
+
+				PrintlnI.printlnI("TestUser class for user: " + this.name +", new message: "+message +" for thread number: " +count, "");
+				PrintlnI.printlnI("TestUser class for user: " + this.name + userNames[count], "");
+			}
+		};
+
+		chatManager.newUser(user);
+
+		// Crear un nuevo chat en el chatManager
+		chat.addUser(user);
+		Thread.sleep(10);
+		if (count == 3)
+		{
+			chat.sendMessage(user, "Message from user: "+user.getName());
+		}
+
+		return user.getName();
 	}
 }
