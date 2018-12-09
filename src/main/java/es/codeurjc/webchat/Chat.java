@@ -62,7 +62,7 @@ public class Chat {
 		// should I use an EM here?
 		//synchronized(users) {
 			for(User u : users.values()){
-				if (u.getName().equals(user.getName())) {
+				if (!u.getName().equals(user.getName())) {
 					CustomPair pair = taskPerUser.get(u.getName());
 					CompletionService<String> completionService;
 					if (pair != null)
@@ -133,7 +133,7 @@ public class Chat {
 	private String newUserInChat(User user, User userNew) throws InterruptedException {
 		//TimeUnit.MILLISECONDS.sleep(ThreadLocalRandom.current().nextInt(0, 500 + 1));
 		user.newUserInChat(this, userNew);
-		PrintlnI.printlnI("New user "+userNew.getName()+" in chat to user "+user.getName(),"");
+		//PrintlnI.printlnI("New user "+userNew.getName()+" in chat message to user "+user.getName(),"");
 		return "New user "+userNew.getName()+" in chat to user "+user.getName();
 	}
 
