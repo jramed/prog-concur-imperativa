@@ -180,7 +180,9 @@ public class ChatManagerTest {
 
 		ExecutorService executor = Executors.newFixedThreadPool(numThreads);
 		CompletionService<String> completionService = new ExecutorCompletionService<>(executor);
-		final String[] userNames = new String[numThreads];
+		final Boolean[] hasUserSentReceiveMsg = new Boolean[numThreads];
+		Arrays.fill(hasUserSentReceiveMsg, false);
+
 		PrintlnI.initPerThread();
 		Chat chat = chatManager.newChat("Chat", 5, TimeUnit.SECONDS);
 
@@ -190,7 +192,7 @@ public class ChatManagerTest {
 		{
 			final int count = i;
 			PrintlnI.initPerThread();
-			completionService.submit(()->simulateUserParallelTest(count, userNames, chatManager, chat));
+			completionService.submit(()->simulateUserParallelTest(count, hasUserSentReceiveMsg, chatManager, chat));
 		}
 
 		//4 thread for 4 users
@@ -224,7 +226,7 @@ public class ChatManagerTest {
 		PrintlnI.printlnI("startTime: "+startTime+ " endTime: "+endTime+" difference: "+ difference ,"");
 		int threshold = 1500;
 		assertTrue("The elapse time between end time "+endTime+" and start time "+startTime+ " is bigger than "+threshold, endTime-startTime < threshold);
-		PrintlnI.printlnI(Arrays.asList(userNames).toString(),"");
+		PrintlnI.printlnI(Arrays.asList(hasUserSentReceiveMsg).toString(),"");
 		// Comprobar que el chat recibido en el método 'newChat' se llama 'Chat'
 
 		//Set<String> valuesToCheck = new HashSet<>();
@@ -237,41 +239,35 @@ public class ChatManagerTest {
 		//	assertTrue("The method 'newChat' should be invoked with "+Arrays.asList(valuesToCheck).toString()+" , but the value is "
 		//			+ returnedValues[i], valuesToCheck.contains(returnedValues[i]));
 		//}
-		String[] valuesToCheck = new String[numThreads];
+		Boolean[] valuesToCheck = new Boolean[numThreads];
 		for (int i = 0; i < numThreads; i++)
 		{
-			valuesToCheck[i]=("user"+i);
+			valuesToCheck[i]=true;
 		}
 
-		assertTrue("The method 'newChat' should be invoked with "+Arrays.asList(valuesToCheck).toString()+" , but the value is "
-				+ Arrays.asList(returnedValues).toString(), Arrays.equals(returnedValues, valuesToCheck));
+		assertTrue("Messages sent for users "+Arrays.asList(valuesToCheck).toString()+" , but the value is "
+				+ Arrays.asList(hasUserSentReceiveMsg).toString(), Arrays.equals(hasUserSentReceiveMsg, valuesToCheck));
 
 		PrintlnI.reset();
-
-		assertTrue("Still pending to be implemented", false);
-		//Thread.sleep(2000);
 	}
 
 
-	private String simulateUserParallelTest(int count, String[] userNames, ChatManager chatManager, Chat chat) throws
+	private String simulateUserParallelTest(int count, Boolean[] hasUserSentReceiveMsg, ChatManager chatManager, Chat chat) throws
 								InterruptedException, TimeoutException {
 
 		TestUser user = new TestUser("user"+count) {
 			public void newMessage(Chat chat, User user, String message) {
-				userNames[count] = this.getName();
+				hasUserSentReceiveMsg[count] = true;
 				try {
-					//System.out.println("User: "+this.getName()+" before spleeping "+System.currentTimeMillis());
 					Thread.sleep(1000);
-					//System.out.println("User: "+this.getName()+" after spleeping  "+System.currentTimeMillis());
 				} catch (InterruptedException intExcep)
 				{
 					PrintlnI.printlnI("Exception received: " + intExcep.toString(),"");
 					intExcep.printStackTrace();
-					//assertTrue("Exception received" + intExcep.toString(), false);
 				}
 
 				PrintlnI.printlnI("User: " + this.name +", new message: "+message +" for thread number: " +count, "");
-				PrintlnI.printlnI("User: " + this.name + userNames[count], "");
+				PrintlnI.printlnI("User: " + this.name + " "+hasUserSentReceiveMsg[count], "");
 
 				latch.countDown();
 			}
@@ -288,7 +284,7 @@ public class ChatManagerTest {
 			try
 			{
 				latch.await(3000L,TimeUnit.MILLISECONDS);
-				userNames[count] = user.getName();
+				hasUserSentReceiveMsg[count] = true;
 			}
 			catch (InterruptedException e)
 			{
