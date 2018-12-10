@@ -8,6 +8,7 @@ import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.CompletionService;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorCompletionService;
 import java.util.concurrent.ExecutorService;
@@ -26,6 +27,7 @@ import es.codeurjc.webchat.PrintlnI;
 
 public class ChatManagerTest {
 
+	private CountDownLatch latch;
 	@Test
 	public void newChat() throws InterruptedException, TimeoutException, ExecutionException {
 
@@ -50,7 +52,7 @@ public class ChatManagerTest {
 		String[][] returnedValues = new String[numThreads][5];
 		for (int i = 0; i < numThreads; ++i) {
 			try {
-				// Crear un usuario que guarda en chatName el nombre del nuevo chat		
+				// Crear un usuario que guarda en chatName el nombre del nuevo chat
 				Future<String[]> f = completionService.take();
 				String[] returnedValue = f.get();
 				returnedValues[i] = returnedValue;
@@ -69,7 +71,7 @@ public class ChatManagerTest {
 		}
 
 		executor.shutdown();
-		
+
 		executor.awaitTermination(10, TimeUnit.SECONDS);
 
 		System.out.println(chatName[0] + " " + chatName[1] + " " + chatName[2] + " " + chatName[3]);
@@ -84,11 +86,11 @@ public class ChatManagerTest {
 	}
 
 
-	private String[] simulateUser(int count, String[] chatName, ChatManager chatManager) throws 
+	private String[] simulateUser(int count, String[] chatName, ChatManager chatManager) throws
 								InterruptedException, TimeoutException {
 		final int numIterations = 5;
 		String[] chatCreated = new String[numIterations];
-		
+
 		TestUser user = new TestUser("user"+Thread.currentThread().getName()) {
 			public void newChat(Chat chat) {
 				//synchronized (chatName) {
@@ -105,7 +107,7 @@ public class ChatManagerTest {
 				//System.out.println("Test("+Thread.currentThread().getName()+"): TestUser class for user: " + this.name +", new chat created: "+chat.getName());
 			}
 		};
-		
+
 		if (count % 2 == 0)
 		{
 			TimeUnit.MILLISECONDS.sleep(ThreadLocalRandom.current().nextInt(0, 100 + 1));
@@ -117,17 +119,17 @@ public class ChatManagerTest {
 			Chat chat = chatManager.newChat("Chat"+i, 5, TimeUnit.SECONDS);
 			chat.addUser(user);
 			chatCreated[i] = chat.getName();
-			
-			//for (User userInChat: chat.getUsers()) {	
+
+			//for (User userInChat: chat.getUsers()) {
 				//System.out.println("Test("+Thread.currentThread().getName()+"): User: "+ userInChat.getName() + " in chat: " + chat.getName());
 			//}
 		}
 		return chatCreated;
 		//return Thread.currentThread().getName();
-		
+
 	}
 
-	
+
 
 	@Test
 	public void newUserInChat() throws InterruptedException, TimeoutException {
@@ -168,8 +170,9 @@ public class ChatManagerTest {
 	}
 
 	@Test
-	public void parallelNotifications() throws InterruptedException, TimeoutException
+	public void parallelMessageSending() throws InterruptedException, TimeoutException
 	{
+		System.out.println("==============NEW test parallelMessageSending=====================");
 		// Crear el chat Manager
 		final ChatManager chatManager = new ChatManager(5);
 
@@ -181,6 +184,8 @@ public class ChatManagerTest {
 		PrintlnI.initPerThread();
 		Chat chat = chatManager.newChat("Chat", 5, TimeUnit.SECONDS);
 
+		long startTime = System.currentTimeMillis();
+		latch = new CountDownLatch(numThreads-1);
 		for (int i = 0; i < numThreads; i++)
 		{
 			final int count = i;
@@ -214,35 +219,50 @@ public class ChatManagerTest {
 
 		executor.awaitTermination(10, TimeUnit.SECONDS);
 
-		Thread.sleep(2000);
+		long endTime = System.currentTimeMillis();
+		long difference = endTime-startTime;
+		PrintlnI.printlnI("startTime: "+startTime+ " endTime: "+endTime+" difference: "+ difference ,"");
+		int threshold = 1500;
+		assertTrue("The elapse time between end time "+endTime+" and start time "+startTime+ " is bigger than "+threshold, endTime-startTime < threshold);
 		PrintlnI.printlnI(Arrays.asList(userNames).toString(),"");
 		// Comprobar que el chat recibido en el método 'newChat' se llama 'Chat'
 
-		Set<String> valuesToCheck = new HashSet<>();
+		//Set<String> valuesToCheck = new HashSet<>();
+		//for (int i = 0; i < numThreads; i++)
+		//{
+		//	valuesToCheck.add("user"+i);
+		//}
+
+		//for (int i = 0; i < numThreads; i++) {
+		//	assertTrue("The method 'newChat' should be invoked with "+Arrays.asList(valuesToCheck).toString()+" , but the value is "
+		//			+ returnedValues[i], valuesToCheck.contains(returnedValues[i]));
+		//}
+		String[] valuesToCheck = new String[numThreads];
 		for (int i = 0; i < numThreads; i++)
 		{
-			valuesToCheck.add("user"+i);
+			valuesToCheck[i]=("user"+i);
 		}
 
-		for (int i = 0; i < numThreads; i++) {
-			assertTrue("The method 'newChat' should be invoked with "+Arrays.asList(valuesToCheck).toString()+" , but the value is "
-					+ returnedValues[i], valuesToCheck.contains(returnedValues[i]));
-		}
+		assertTrue("The method 'newChat' should be invoked with "+Arrays.asList(valuesToCheck).toString()+" , but the value is "
+				+ Arrays.asList(returnedValues).toString(), Arrays.equals(returnedValues, valuesToCheck));
 
 		PrintlnI.reset();
 
 		assertTrue("Still pending to be implemented", false);
+		//Thread.sleep(2000);
 	}
 
 
-	private String simulateUserParallelTest(int count, String[] userNames, ChatManager chatManager, Chat chat) throws 
+	private String simulateUserParallelTest(int count, String[] userNames, ChatManager chatManager, Chat chat) throws
 								InterruptedException, TimeoutException {
 
 		TestUser user = new TestUser("user"+count) {
 			public void newMessage(Chat chat, User user, String message) {
 				userNames[count] = this.getName();
 				try {
+					//System.out.println("User: "+this.getName()+" before spleeping "+System.currentTimeMillis());
 					Thread.sleep(1000);
+					//System.out.println("User: "+this.getName()+" after spleeping  "+System.currentTimeMillis());
 				} catch (InterruptedException intExcep)
 				{
 					PrintlnI.printlnI("Exception received: " + intExcep.toString(),"");
@@ -250,8 +270,10 @@ public class ChatManagerTest {
 					//assertTrue("Exception received" + intExcep.toString(), false);
 				}
 
-				PrintlnI.printlnI("TestUser class for user: " + this.name +", new message: "+message +" for thread number: " +count, "");
-				PrintlnI.printlnI("TestUser class for user: " + this.name + userNames[count], "");
+				PrintlnI.printlnI("User: " + this.name +", new message: "+message +" for thread number: " +count, "");
+				PrintlnI.printlnI("User: " + this.name + userNames[count], "");
+
+				latch.countDown();
 			}
 		};
 
@@ -263,7 +285,17 @@ public class ChatManagerTest {
 		if (count == 3)
 		{
 			chat.sendMessage(user, "Message from user: "+user.getName());
+			try
+			{
+				latch.await(3000L,TimeUnit.MILLISECONDS);
+				userNames[count] = user.getName();
+			}
+			catch (InterruptedException e)
+			{
+				PrintlnI.printlnI("Exception waiting from count donw latch", "");
+			}
 		}
+
 
 		return user.getName();
 	}
