@@ -227,18 +227,8 @@ public class ChatManagerTest {
 		int threshold = 1500;
 		assertTrue("The elapse time between end time "+endTime+" and start time "+startTime+ " is bigger than "+threshold, endTime-startTime < threshold);
 		PrintlnI.printlnI(Arrays.asList(hasUserSentReceiveMsg).toString(),"");
+
 		// Comprobar que el chat recibido en el método 'newChat' se llama 'Chat'
-
-		//Set<String> valuesToCheck = new HashSet<>();
-		//for (int i = 0; i < numThreads; i++)
-		//{
-		//	valuesToCheck.add("user"+i);
-		//}
-
-		//for (int i = 0; i < numThreads; i++) {
-		//	assertTrue("The method 'newChat' should be invoked with "+Arrays.asList(valuesToCheck).toString()+" , but the value is "
-		//			+ returnedValues[i], valuesToCheck.contains(returnedValues[i]));
-		//}
 		Boolean[] valuesToCheck = new Boolean[numThreads];
 		for (int i = 0; i < numThreads; i++)
 		{
@@ -277,14 +267,13 @@ public class ChatManagerTest {
 
 		// Crear un nuevo chat en el chatManager
 		chat.addUser(user);
-		Thread.sleep(10);
-		if (count == 3)
+
+		if (count == 0)
 		{
 			chat.sendMessage(user, "Message from user: "+user.getName());
 			try
 			{
-				latch.await(3000L,TimeUnit.MILLISECONDS);
-				hasUserSentReceiveMsg[count] = true;
+				hasUserSentReceiveMsg[count] = latch.await(2000L,TimeUnit.MILLISECONDS);
 			}
 			catch (InterruptedException e)
 			{
