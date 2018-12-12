@@ -4,9 +4,6 @@ import static org.junit.Assert.assertTrue;
 
 import java.util.Arrays;
 import java.util.ConcurrentModificationException;
-import java.util.HashSet;
-import java.util.Objects;
-import java.util.Set;
 import java.util.concurrent.CompletionService;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Exchanger;
@@ -47,7 +44,6 @@ public class ChatManagerTest {
 			final int count = i;
 			completionService.submit(()->simulateUser(count, chatName, chatManager));
 			PrintlnI.initPerThread();
-			//Thread.sleep(300);
 		}
 
 
@@ -95,18 +91,15 @@ public class ChatManagerTest {
 
 		TestUser user = new TestUser("user"+Thread.currentThread().getName()) {
 			public void newChat(Chat chat) {
-				//synchronized (chatName) {
-					if ( null != chatName[count]) {
-						chatName[count] = chatName[count]+chat.getName();
-					}
-					else {
-						chatName[count] = chat.getName();
-					}
-				//}
+				if ( null != chatName[count]) {
+					chatName[count] = chatName[count]+chat.getName();
+				}
+				else {
+					chatName[count] = chat.getName();
+				}
+
 				PrintlnI.printlnI("TestUser class for user: " + this.name +", new chat created: "+chat.getName() +" for thread number: " +count, "");
 				PrintlnI.printlnI("TestUser class for user: " + this.name + chatName[count], "");
-
-				//System.out.println("Test("+Thread.currentThread().getName()+"): TestUser class for user: " + this.name +", new chat created: "+chat.getName());
 			}
 		};
 
@@ -121,14 +114,8 @@ public class ChatManagerTest {
 			Chat chat = chatManager.newChat("Chat"+i, 5, TimeUnit.SECONDS);
 			chat.addUser(user);
 			chatCreated[i] = chat.getName();
-
-			//for (User userInChat: chat.getUsers()) {
-				//System.out.println("Test("+Thread.currentThread().getName()+"): User: "+ userInChat.getName() + " in chat: " + chat.getName());
-			//}
 		}
 		return chatCreated;
-		//return Thread.currentThread().getName();
-
 	}
 
 
@@ -136,7 +123,6 @@ public class ChatManagerTest {
 	@Test
 	public void newUserInChat() throws InterruptedException, TimeoutException {
 
-		Thread.sleep(1000);
 		System.out.println("==============NEW test=====================");
 		PrintlnI.initPerThread();
 		ChatManager chatManager = new ChatManager(5);
@@ -147,7 +133,6 @@ public class ChatManagerTest {
 			@Override
 			public void newUserInChat(Chat chat, User user) {
 				PrintlnI.printlnI("Received notification from user: "+user.getName(),"");
-				//System.out.println("Received notification from user: "+user.getName());
 				newUser[0] = user.getName();
 			}
 		};
