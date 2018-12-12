@@ -9,6 +9,7 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.CompletionService;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Exchanger;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorCompletionService;
 import java.util.concurrent.ExecutorService;
@@ -28,6 +29,7 @@ import es.codeurjc.webchat.PrintlnI;
 public class ChatManagerTest {
 
 	private CountDownLatch latch;
+	private Exchanger<Boolean> exchanger;
 	@Test
 	public void newChat() throws InterruptedException, TimeoutException, ExecutionException {
 
@@ -284,4 +286,126 @@ public class ChatManagerTest {
 
 		return user.getName();
 	}
+
+	@Test
+	public void messageOrderCheck() throws InterruptedException, TimeoutException
+	{
+		System.out.println("==============NEW test messageOrderCheck=====================");
+		final ChatManager chatManager = new ChatManager(5);
+
+		int numThreads = 2;
+
+		ExecutorService executor = Executors.newFixedThreadPool(numThreads);
+		CompletionService<String> completionService = new ExecutorCompletionService<>(executor);
+		final Boolean[] hasUserSentReceiveMsgInOrder = new Boolean[numThreads];
+		Arrays.fill(hasUserSentReceiveMsgInOrder, false);
+
+		PrintlnI.initPerThread();
+		Chat chat = chatManager.newChat("Chat", 5, TimeUnit.SECONDS);
+		exchanger = new Exchanger<Boolean>();
+
+		for (int i = 0; i < numThreads; i++)
+		{
+			final int count = i;
+			PrintlnI.initPerThread();
+			completionService.submit(()->checkMsgOrderTest(count, hasUserSentReceiveMsgInOrder, chatManager, chat));
+		}
+
+		//2 thread for 2 users
+		String[] returnedValues = new String[numThreads];
+		for (int i = 0; i < numThreads; ++i) {
+			try {
+				Future<String> f = completionService.take();
+				String returnedValue = f.get();
+				returnedValues[i] = returnedValue;
+				System.out.println("The returned value from the Thread is: "+ Arrays.asList(returnedValues[i]).toString());
+			} catch (ConcurrentModificationException e) {
+				System.out.println("Exception: " + e.toString());
+				assertTrue("Exception received" + e.toString(), false);
+			} catch (InterruptedException e) {
+				System.out.println("Exception: " + e.toString());
+				assertTrue("Exception received" + e.toString(), false);
+			} catch (ExecutionException e) {
+				System.out.println("Exception: " + e.toString());
+				e.printStackTrace();
+				assertTrue("Exception received" + e.toString(), false);
+			}
+		}
+
+		executor.shutdown();
+
+		executor.awaitTermination(10, TimeUnit.SECONDS);
+
+		PrintlnI.printlnI(Arrays.asList(hasUserSentReceiveMsgInOrder).toString(),"");
+
+		Boolean[] valuesToCheck = new Boolean[numThreads];
+		for (int i = 0; i < numThreads; i++)
+		{
+			valuesToCheck[i]=true;
+		}
+
+		assertTrue("Messages sent for users "+Arrays.asList(valuesToCheck).toString()+" , but the value is "
+				+ Arrays.asList(hasUserSentReceiveMsgInOrder).toString(), Arrays.equals(hasUserSentReceiveMsgInOrder, valuesToCheck));
+
+		PrintlnI.reset();
+	}
+
+
+	private String checkMsgOrderTest(int count, Boolean[] hasUserSentReceiveMsgInOrder, ChatManager chatManager,
+			Chat chat) throws InterruptedException, TimeoutException {
+		TestUser user = new TestUser("user"+count) {
+			int previousReceivedMsg = 0;
+			public void newMessage(Chat chat, User user, String message) {
+				PrintlnI.printlnI("User: " + this.name +", new message: "+message, "");
+				try {
+					boolean isInOrder = false;
+					hasUserSentReceiveMsgInOrder[count] = false;
+					if (previousReceivedMsg == Integer.valueOf(message)-1)
+					{
+						previousReceivedMsg = Integer.valueOf(message);
+						isInOrder = true;
+						hasUserSentReceiveMsgInOrder[count] = true;
+					}
+
+					exchanger.exchange(isInOrder,1000L, TimeUnit.MILLISECONDS);
+					Thread.sleep(500);
+				} catch (InterruptedException intExcep)
+				{
+					PrintlnI.printlnI("Exception received: " + intExcep.toString(),"");
+					intExcep.printStackTrace();
+				}
+				catch (TimeoutException timeOutExcep)
+				{
+					PrintlnI.printlnI("Exception received: " + timeOutExcep.toString(),"");
+					timeOutExcep.printStackTrace();
+				}
+
+				PrintlnI.printlnI("User: " + this.name + " "+hasUserSentReceiveMsgInOrder[count], "");
+			}
+		};
+
+		chatManager.newUser(user);
+
+		// Crear un nuevo chat en el chatManager
+		chat.addUser(user);
+		if (count == 0)
+		{
+			for (int i = 1; i <= 5; i++)
+			{
+				chat.sendMessage(user, String.valueOf(i));
+				Boolean result = exchanger.exchange(null,1000L, TimeUnit.MILLISECONDS);
+				if ( !result.booleanValue() )
+				{
+					PrintlnI.printlnI("False received in the exchange","");
+					hasUserSentReceiveMsgInOrder[count] = false;
+					return user.getName();
+				}
+			}
+			PrintlnI.printlnI("After the for","");
+			hasUserSentReceiveMsgInOrder[count] = true;
+		}
+
+		return user.getName();
+	}
+
 }
