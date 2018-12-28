@@ -46,11 +46,12 @@ public class ChatManager {
 
 		Chat theChat = null;
 		boolean isChatCreated = false;
-		synchronized (chats) {
+		/*synchronized (chats) {
 			if(chats.containsKey(name)){
 				PrintlnI.printlnI("Chat: "+name+" already created.","");
 				//System.out.println(Thread.currentThread().getName()+"Chat: "+name+" already created." + " In thread: "+Thread.currentThread().getName());
 				theChat = chats.get(name);
+				return theChat;
 			} else {
 				theChat = new Chat(this, name);
 				//No need to use putIfAbsent because it is synchronized
@@ -59,16 +60,26 @@ public class ChatManager {
 				//System.out.println(Thread.currentThread().getName()+"Creating chat: "+name+ " In thread: "+Thread.currentThread().getName());
 				PrintlnI.printlnI("Creating chat: "+name, "");
 			}
+		}*/
+		theChat = new Chat(this, name);
+		Chat obtainedChat = chats.putIfAbsent(name, theChat);
+		if (null != obtainedChat )
+		{
+			PrintlnI.printlnI("Chat: "+name+" already created.","");
+			return obtainedChat;
+		} else {
+			isChatCreated = true;
+			PrintlnI.printlnI("Creating chat: "+name, "");
 		}
 		
 		if (isChatCreated) {
-			synchronized (users) {
+			//synchronized (users) {
 				for(User user : users.values()){
 					//System.out.println("Sent message or new chat to user: "+ user.getName());
 					user.newChat(theChat);
 					//PrintlnI.printlnI("Sent message of new chat: "+ theChat.getName() +" to user: "+ user.getName(),"");
 				}
-			}		
+			//}		
 		}
 		
 		return theChat;
@@ -83,11 +94,11 @@ public class ChatManager {
 		}
 
 		//TODO should it be included in a mutual exclusion zone?
-		synchronized (users) {
+		//synchronized (users) {
 			for(User user : users.values()){
 				user.chatClosed(removedChat);
 			}
-		}
+		//}
 	}
 
 	public Collection<Chat> getChats() {
