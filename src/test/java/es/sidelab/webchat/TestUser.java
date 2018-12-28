@@ -35,7 +35,7 @@ public class TestUser implements User {
 	@Override
 	public void newUserInChat(Chat chat, User user) {
 		//System.out.println(this.name + ": New user " + user.getName() + " in chat " + chat.getName());
-		PrintlnI.printlnI(this.name + ": New user " + user.getName() + " in chat " + chat.getName(),"");
+		PrintlnI.printlnI("TestUSer: "+this.name + ": New user " + user.getName() + " in chat " + chat.getName(),"");
 	}
 
 	@Override
@@ -45,7 +45,7 @@ public class TestUser implements User {
 
 	@Override
 	public void newMessage(Chat chat, User user, String message) {
-		System.out.println("New message '" + message + "' from user " + user.getName()
+		System.out.println("TestUser: New message '" + message + "' from user " + user.getName()
 				+ " in chat " + chat.getName());
 	}
 
