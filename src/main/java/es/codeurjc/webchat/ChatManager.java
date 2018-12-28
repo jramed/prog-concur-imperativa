@@ -127,6 +127,7 @@ public class ChatManager {
 		
 		if (isChatCreated) {
 			final Chat theUsedChat = theChat;
+			//this is quite similar to the code in closeChat
 			for(User u : users.values()){
 				CustomPair pair = taskPerUser.get(u.getName());
 				CompletionService<String> completionService;
@@ -151,10 +152,24 @@ public class ChatManager {
 
 		//TODO should it be included in a mutual exclusion zone?
 		//synchronized (users) {
-			for(User user : users.values()){
+		/*	for(User user : users.values()){
 				user.chatClosed(removedChat);
-			}
+			}*/
 		//}
+
+		
+		final Chat theUsedChat = removedChat;
+		//this is quite similar to the code in newChat
+		for(User u : users.values()){
+			CustomPair pair = taskPerUser.get(u.getName());
+			CompletionService<String> completionService;
+			if (pair != null)
+			{
+				completionService = pair.getCompletionServices();
+				if (completionService != null)
+					completionService.submit(()->notifyClosedChat(u,theUsedChat));
+			}
+		}
 	}
 
 	public Collection<Chat> getChats() {
@@ -184,5 +199,12 @@ public class ChatManager {
 		user.newChat(chat);
 		//PrintlnI.printlnI("New user "+userNew.getName()+" in chat message to user "+user.getName(),"");
 		return "New Chat "+ chat.getName()+" message for user "+user.getName();
+	}
+	
+	private String notifyClosedChat(User user, Chat chat) throws InterruptedException {
+		//TimeUnit.MILLISECONDS.sleep(ThreadLocalRandom.current().nextInt(0, 500 + 1));
+		user.chatClosed(chat);
+		//PrintlnI.printlnI("New user "+userNew.getName()+" in chat message to user "+user.getName(),"");
+		return "Closed Chat "+ chat.getName()+" message for user "+user.getName();
 	}
 }
