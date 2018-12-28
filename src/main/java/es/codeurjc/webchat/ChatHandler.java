@@ -74,6 +74,7 @@ public class ChatHandler extends TextWebSocketHandler {
 		User user = (User) session.getAttributes().get("user");
 		Chat chat = (Chat) session.getAttributes().get("chat");
 
+		chatManager.removeUser(user);
 		chat.removeUser(user);
 	}
 }
