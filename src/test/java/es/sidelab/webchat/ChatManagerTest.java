@@ -339,18 +339,16 @@ public class ChatManagerTest {
 			int previousReceivedMsg = 0;
 			public void newMessage(Chat chat, User user, String message) {
 				PrintlnI.printlnI("User: " + this.name +", new message: "+message, "");
+				boolean isInOrder = false;
 				try {
-					boolean isInOrder = false;
-					hasUserSentReceiveMsgInOrder[count] = false;
 					if (previousReceivedMsg == Integer.valueOf(message)-1)
 					{
 						previousReceivedMsg = Integer.valueOf(message);
 						isInOrder = true;
-						hasUserSentReceiveMsgInOrder[count] = true;
+						hasUserSentReceiveMsgInOrder[count] = isInOrder;
 					}
-
-					exchanger.exchange(isInOrder,1000L, TimeUnit.MILLISECONDS);
 					Thread.sleep(500);
+					exchanger.exchange(isInOrder,1000L, TimeUnit.MILLISECONDS);
 				} catch (InterruptedException intExcep)
 				{
 					PrintlnI.printlnI("Exception received: " + intExcep.toString(),"");
@@ -362,7 +360,7 @@ public class ChatManagerTest {
 					timeOutExcep.printStackTrace();
 				}
 
-				PrintlnI.printlnI("User: " + this.name + " "+hasUserSentReceiveMsgInOrder[count], "");
+				PrintlnI.printlnI("User: " + this.name + " "+isInOrder, "");
 			}
 		};
 
@@ -372,16 +370,19 @@ public class ChatManagerTest {
 		chat.addUser(user);
 		if (count == 0)
 		{
+			//ensure that the messages are sent after all user has been created
+			TimeUnit.MILLISECONDS.sleep(100);
 			for (int i = 1; i <= 5; i++)
 			{
 				chat.sendMessage(user, String.valueOf(i));
 				Boolean result = exchanger.exchange(null,1000L, TimeUnit.MILLISECONDS);
+				PrintlnI.printlnI(result+" received from the exchange","");
 				if ( false == result )
 				{
-					PrintlnI.printlnI("False received in the exchange","");
+					PrintlnI.printlnI("False received from the exchange","");
 					hasUserSentReceiveMsgInOrder[count] = false;
 					return user.getName();
-				}
+				} 
 			}
 			PrintlnI.printlnI("After the for","");
 			hasUserSentReceiveMsgInOrder[count] = true;
@@ -390,4 +391,94 @@ public class ChatManagerTest {
 		return user.getName();
 	}
 
+	@Test
+	public void newChatCheckMsg() throws InterruptedException, TimeoutException, ExecutionException {
+
+		// Crear el chat Manager
+		final ChatManager chatManager = new ChatManager(5);
+
+		int numThreads = 4;
+
+		ExecutorService executor = Executors.newFixedThreadPool(numThreads);
+		CompletionService<String> completionService = new ExecutorCompletionService<>(executor);
+		final Boolean[] hasUserReceiveNotifNewChat = new Boolean[numThreads];
+		Arrays.fill(hasUserReceiveNotifNewChat, false);
+
+		PrintlnI.initPerThread();
+
+		for (int i = 0; i < numThreads; ++i) {
+			final int count = i;
+			PrintlnI.initPerThread();
+			completionService.submit(()->checkMsgInChatCreation(count, chatManager, hasUserReceiveNotifNewChat, numThreads));
+		}
+
+
+		String[] returnedValues = new String[numThreads];
+		for (int i = 0; i < numThreads; ++i) {
+			try {
+				// Crear un usuario que guarda en chatName el nombre del nuevo chat
+				Future<String> f = completionService.take();
+				returnedValues[i] = f.get();
+				System.out.println("The returned value from the Thread is: "+ Arrays.asList(returnedValues[i]).toString());
+			} catch (ConcurrentModificationException e) {
+				System.out.println("Exception: " + e.toString());
+				assertTrue("Exception received" + e.toString(), false);
+			} catch (InterruptedException e) {
+				System.out.println("Exception: " + e.toString());
+				assertTrue("Exception received" + e.toString(), false);
+			} catch (ExecutionException e) {
+				System.out.println("Exception: " + e.toString());
+				e.printStackTrace();
+				assertTrue("Exception received" + e.toString(), false);
+			}
+		}
+
+		executor.shutdown();
+
+		executor.awaitTermination(10, TimeUnit.SECONDS);
+
+		PrintlnI.printlnI(Arrays.asList(hasUserReceiveNotifNewChat).toString(),"");
+
+		Boolean[] valuesToCheck = new Boolean[numThreads];
+		Arrays.fill(valuesToCheck, true);
+
+		assertTrue("Messages sent for users "+Arrays.asList(valuesToCheck).toString()+" , but the value is "
+				+ Arrays.asList(hasUserReceiveNotifNewChat).toString(), Arrays.equals(hasUserReceiveNotifNewChat, valuesToCheck));
+
+		PrintlnI.reset();
+	}
+
+
+	private String checkMsgInChatCreation(int count, ChatManager chatManager, 
+			Boolean[] hasUserReceiveNotif, int numThreads ) throws InterruptedException, TimeoutException {
+
+		TestUser user = new TestUser("user"+count) {
+			public void newChat(Chat chat) {
+				PrintlnI.printlnI("User: " + this.name +", new Chat created:" + chat.getName(), "");
+				try {
+					hasUserReceiveNotif[count] =  true;
+					Thread.sleep(500);
+				} catch (InterruptedException intExcep)
+				{
+					PrintlnI.printlnI("Exception received: " + intExcep.toString(),"");
+					intExcep.printStackTrace();
+				}
+
+				PrintlnI.printlnI("User: " + this.name + " "+hasUserReceiveNotif[count], "");
+			}
+		};
+
+		chatManager.newUser(user);
+
+		
+		if (count+1 == numThreads) {
+			// Create the chat from chatManager just once. For the last user
+			// ensure that all the user are created.
+			Thread.sleep(100);
+			chatManager.newChat("Chat", 5, TimeUnit.SECONDS);
+		}
+		
+		return user.getName();
+	}
+	
 }
