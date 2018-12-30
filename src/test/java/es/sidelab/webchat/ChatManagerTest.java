@@ -27,7 +27,9 @@ public class ChatManagerTest {
 
 	private CountDownLatch latch;
 	private CountDownLatch latchCreateChat;
+	private CountDownLatch latchCloseChat;
 	private Exchanger<Boolean> exchanger;
+
 	@Test
 	public void newChat() throws InterruptedException, TimeoutException, ExecutionException {
 
@@ -395,7 +397,7 @@ public class ChatManagerTest {
 	@Test
 	public void newChatMsgReception() throws InterruptedException, TimeoutException, ExecutionException {
 
-		System.out.println("==============NEW test messageOrderCheck=====================");
+		System.out.println("==============NEW test newChatMsgReception=====================");
 		// Crear el chat Manager
 		final ChatManager chatManager = new ChatManager(5);
 
@@ -491,5 +493,110 @@ public class ChatManagerTest {
 		
 		return user.getName();
 	}
-	
+
+	@Test
+	public void closeChatMsgReception() throws InterruptedException, TimeoutException, ExecutionException {
+
+		System.out.println("==============NEW test closeChatMsgReception=====================");
+		// Crear el chat Manager
+		final ChatManager chatManager = new ChatManager(5);
+
+		int numThreads = 4;
+
+		ExecutorService executor = Executors.newFixedThreadPool(numThreads);
+		CompletionService<String> completionService = new ExecutorCompletionService<>(executor);
+		final Boolean[] hasUserReceiveNotifNewChat = new Boolean[numThreads];
+		Arrays.fill(hasUserReceiveNotifNewChat, false);
+
+		PrintlnI.initPerThread();
+
+		long startTime = System.currentTimeMillis();
+		for (int i = 0; i < numThreads; ++i) {
+			final int count = i;
+			PrintlnI.initPerThread();
+			completionService.submit(()->checkMsgInChatRemoval(count, chatManager, hasUserReceiveNotifNewChat, numThreads));
+		}
+
+
+		String[] returnedValues = new String[numThreads];
+		for (int i = 0; i < numThreads; ++i) {
+			try {
+				// Crear un usuario que guarda en chatName el nombre del nuevo chat
+				Future<String> f = completionService.take();
+				returnedValues[i] = f.get();
+				System.out.println("The returned value from the Thread is: "+ Arrays.asList(returnedValues[i]).toString());
+			} catch (ConcurrentModificationException e) {
+				System.out.println("Exception: " + e.toString());
+				assertTrue("Exception received" + e.toString(), false);
+			} catch (InterruptedException e) {
+				System.out.println("Exception: " + e.toString());
+				assertTrue("Exception received" + e.toString(), false);
+			} catch (ExecutionException e) {
+				System.out.println("Exception: " + e.toString());
+				e.printStackTrace();
+				assertTrue("Exception received" + e.toString(), false);
+			}
+		}
+
+		executor.shutdown();
+
+		executor.awaitTermination(10, TimeUnit.SECONDS);
+
+		long endTime = System.currentTimeMillis();
+		long difference = endTime-startTime;
+		PrintlnI.printlnI("startTime: "+startTime+ " endTime: "+endTime+" difference: "+ difference ,"");
+		int threshold = 1500;
+		assertTrue("The elapse time between end time "+endTime+" and start time "+startTime+ " is bigger than "+threshold, endTime-startTime < threshold);
+
+		PrintlnI.printlnI(Arrays.asList(hasUserReceiveNotifNewChat).toString(),"");
+
+		Boolean[] valuesToCheck = new Boolean[numThreads];
+		Arrays.fill(valuesToCheck, true);
+
+		assertTrue("Messages sent for users "+Arrays.asList(valuesToCheck).toString()+" , but the value is "
+				+ Arrays.asList(hasUserReceiveNotifNewChat).toString(), Arrays.equals(hasUserReceiveNotifNewChat, valuesToCheck));
+
+		PrintlnI.reset();
+	}
+
+
+	private String checkMsgInChatRemoval(int count, ChatManager chatManager,
+			Boolean[] hasUserReceiveNotif, int numThreads ) throws InterruptedException, TimeoutException {
+
+		TestUser user = new TestUser("user"+count) {
+/*			public void newChat(Chat chat) {
+				PrintlnI.printlnI("User: " + this.name +", new Chat has been created:" + chat.getName(), "");
+				latchCreateChat.countDown();
+			}*/
+			public void chatClosed(Chat chat) {
+				PrintlnI.printlnI("User: " + this.name +", Chat: " + chat.getName() + " has been closed", "");
+				try {
+					Thread.sleep(500);
+					hasUserReceiveNotif[count] =  true;
+					PrintlnI.printlnI("User: " + this.name + " "+hasUserReceiveNotif[count], "");
+					latchCloseChat.countDown();
+				} catch (InterruptedException intExcep)
+				{
+					PrintlnI.printlnI("Exception received: " + intExcep.toString(),"");
+					intExcep.printStackTrace();
+				}
+			}
+
+		};
+
+		chatManager.newUser(user);
+
+		if (count+1 == numThreads) {
+			// Create the chat from chatManager just once. For the last user
+			Thread.sleep(100);
+			Chat chat = chatManager.newChat("Chat", 5, TimeUnit.SECONDS);
+			//close the chant and wait until all the user notify the reception
+			//of the message
+			chat.close();
+			latchCloseChat = new CountDownLatch(numThreads);
+			latchCloseChat.await(2000L, TimeUnit.MILLISECONDS);
+		}
+
+		return user.getName();
+	}
 }
