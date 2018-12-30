@@ -568,7 +568,11 @@ public class ChatManagerTest {
 				PrintlnI.printlnI("User: " + this.name +", Chat: " + chat.getName() + " has been closed", "");
 				try {
 					Thread.sleep(500);
-					hasUserReceiveNotif[count] =  true;
+					if (chat.getName() == "Chat") {
+						hasUserReceiveNotif[count] =  true;
+					} else {
+						hasUserReceiveNotif[count] =  false;
+					}
 					PrintlnI.printlnI("User: " + this.name + " "+hasUserReceiveNotif[count], "");
 					latchCloseChat.countDown();
 				} catch (InterruptedException intExcep)
@@ -586,6 +590,7 @@ public class ChatManagerTest {
 			// Create the chat from chatManager just once. For the last user
 			Thread.sleep(100);
 			Chat chat = chatManager.newChat("Chat", 5, TimeUnit.SECONDS);
+			chatManager.newChat("Chat2", 5, TimeUnit.SECONDS);
 			//close the chant and wait until all the user notify the reception
 			//of the message
 			chat.close();
@@ -593,6 +598,9 @@ public class ChatManagerTest {
 			latchCloseChat.await(2000L, TimeUnit.MILLISECONDS);
 		}
 
+		Thread.sleep(300);
 		return user.getName();
 	}
+
+
 }
