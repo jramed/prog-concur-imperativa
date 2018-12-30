@@ -26,6 +26,7 @@ import es.codeurjc.webchat.PrintlnI;
 public class ChatManagerTest {
 
 	private CountDownLatch latch;
+	private CountDownLatch latchCreateChat;
 	private Exchanger<Boolean> exchanger;
 	@Test
 	public void newChat() throws InterruptedException, TimeoutException, ExecutionException {
@@ -392,8 +393,9 @@ public class ChatManagerTest {
 	}
 
 	@Test
-	public void newChatCheckMsg() throws InterruptedException, TimeoutException, ExecutionException {
+	public void newChatMsgReception() throws InterruptedException, TimeoutException, ExecutionException {
 
+		System.out.println("==============NEW test messageOrderCheck=====================");
 		// Crear el chat Manager
 		final ChatManager chatManager = new ChatManager(5);
 
@@ -406,6 +408,7 @@ public class ChatManagerTest {
 
 		PrintlnI.initPerThread();
 
+		long startTime = System.currentTimeMillis();
 		for (int i = 0; i < numThreads; ++i) {
 			final int count = i;
 			PrintlnI.initPerThread();
@@ -437,6 +440,12 @@ public class ChatManagerTest {
 
 		executor.awaitTermination(10, TimeUnit.SECONDS);
 
+		long endTime = System.currentTimeMillis();
+		long difference = endTime-startTime;
+		PrintlnI.printlnI("startTime: "+startTime+ " endTime: "+endTime+" difference: "+ difference ,"");
+		int threshold = 1500;
+		assertTrue("The elapse time between end time "+endTime+" and start time "+startTime+ " is bigger than "+threshold, endTime-startTime < threshold);
+
 		PrintlnI.printlnI(Arrays.asList(hasUserReceiveNotifNewChat).toString(),"");
 
 		Boolean[] valuesToCheck = new Boolean[numThreads];
@@ -454,17 +463,17 @@ public class ChatManagerTest {
 
 		TestUser user = new TestUser("user"+count) {
 			public void newChat(Chat chat) {
-				PrintlnI.printlnI("User: " + this.name +", new Chat created:" + chat.getName(), "");
+				PrintlnI.printlnI("User: " + this.name +", new Chat has been created:" + chat.getName(), "");
 				try {
-					hasUserReceiveNotif[count] =  true;
 					Thread.sleep(500);
+					hasUserReceiveNotif[count] =  true;
+					PrintlnI.printlnI("User: " + this.name + " "+hasUserReceiveNotif[count], "");
+					latchCreateChat.countDown();
 				} catch (InterruptedException intExcep)
 				{
 					PrintlnI.printlnI("Exception received: " + intExcep.toString(),"");
 					intExcep.printStackTrace();
 				}
-
-				PrintlnI.printlnI("User: " + this.name + " "+hasUserReceiveNotif[count], "");
 			}
 		};
 
@@ -476,6 +485,8 @@ public class ChatManagerTest {
 			// ensure that all the user are created.
 			Thread.sleep(100);
 			chatManager.newChat("Chat", 5, TimeUnit.SECONDS);
+			latchCreateChat = new CountDownLatch(numThreads-1);
+			latchCreateChat.await(2000L, TimeUnit.MILLISECONDS);
 		}
 		
 		return user.getName();
