@@ -324,10 +324,7 @@ public class ChatManagerTest {
 		PrintlnI.printlnI(Arrays.asList(hasUserSentReceiveMsgInOrder).toString(),"");
 
 		Boolean[] valuesToCheck = new Boolean[numThreads];
-		for (int i = 0; i < numThreads; i++)
-		{
-			valuesToCheck[i]=true;
-		}
+		Arrays.fill(valuesToCheck, true);
 
 		assertTrue("Messages sent for users "+Arrays.asList(valuesToCheck).toString()+" , but the value is "
 				+ Arrays.asList(hasUserSentReceiveMsgInOrder).toString(), Arrays.equals(hasUserSentReceiveMsgInOrder, valuesToCheck));
@@ -379,7 +376,7 @@ public class ChatManagerTest {
 			{
 				chat.sendMessage(user, String.valueOf(i));
 				Boolean result = exchanger.exchange(null,1000L, TimeUnit.MILLISECONDS);
-				if ( !result.booleanValue() )
+				if ( false == result )
 				{
 					PrintlnI.printlnI("False received in the exchange","");
 					hasUserSentReceiveMsgInOrder[count] = false;
