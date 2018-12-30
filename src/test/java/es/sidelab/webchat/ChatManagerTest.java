@@ -487,7 +487,7 @@ public class ChatManagerTest {
 			// ensure that all the user are created.
 			Thread.sleep(100);
 			chatManager.newChat("Chat", 5, TimeUnit.SECONDS);
-			latchCreateChat = new CountDownLatch(numThreads-1);
+			latchCreateChat = new CountDownLatch(numThreads);
 			latchCreateChat.await(2000L, TimeUnit.MILLISECONDS);
 		}
 		
