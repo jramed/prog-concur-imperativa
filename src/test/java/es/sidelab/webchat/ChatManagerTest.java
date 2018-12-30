@@ -564,10 +564,6 @@ public class ChatManagerTest {
 			Boolean[] hasUserReceiveNotif, int numThreads ) throws InterruptedException, TimeoutException {
 
 		TestUser user = new TestUser("user"+count) {
-/*			public void newChat(Chat chat) {
-				PrintlnI.printlnI("User: " + this.name +", new Chat has been created:" + chat.getName(), "");
-				latchCreateChat.countDown();
-			}*/
 			public void chatClosed(Chat chat) {
 				PrintlnI.printlnI("User: " + this.name +", Chat: " + chat.getName() + " has been closed", "");
 				try {
