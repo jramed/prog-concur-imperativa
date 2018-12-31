@@ -380,7 +380,7 @@ public class ChatManagerTest {
 		chat.addUser(user);
 		if (count+1 == numThreads)
 		{
-			//ensure that the messages are sent after all user has been created
+			//ensure that the messages are sent after all user have been created
 			TimeUnit.MILLISECONDS.sleep(100);
 			for (int i = 1; i <= 5; i++)
 			{
