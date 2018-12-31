@@ -303,7 +303,7 @@ public class ChatManagerTest {
 		{
 			final int count = i;
 			PrintlnI.initPerThread();
-			completionService.submit(()->checkMsgOrderTest(count, hasUserSentReceiveMsgInOrder, chatManager, chat));
+			completionService.submit(()->checkMsgOrderTest(count, hasUserSentReceiveMsgInOrder, chatManager, chat, numThreads));
 		}
 
 		//2 thread for 2 users
@@ -344,7 +344,7 @@ public class ChatManagerTest {
 
 
 	private String checkMsgOrderTest(int count, Boolean[] hasUserSentReceiveMsgInOrder, ChatManager chatManager,
-			Chat chat) throws InterruptedException, TimeoutException {
+			Chat chat, int numThreads) throws InterruptedException, TimeoutException {
 		TestUser user = new TestUser("user"+count) {
 			int previousReceivedMsg = 0;
 			public void newMessage(Chat chat, User user, String message) {
@@ -378,7 +378,7 @@ public class ChatManagerTest {
 
 		// Crear un nuevo chat en el chatManager
 		chat.addUser(user);
-		if (count == 0)
+		if (count+1 == numThreads)
 		{
 			//ensure that the messages are sent after all user has been created
 			TimeUnit.MILLISECONDS.sleep(100);
