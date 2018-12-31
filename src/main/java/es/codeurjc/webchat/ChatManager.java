@@ -12,25 +12,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 public class ChatManager {
-	
-	private class CustomPair {
-	    private ExecutorService executor;
-	    private CompletionService<String> completionServices;
-	    
-		public CustomPair(ExecutorService executor2, CompletionService<String> completionServices) {
-			super();
-			this.executor = executor2;
-			this.completionServices = completionServices;
-		}
-		public ExecutorService getExecutor() {
-			return executor;
-		}
-
-		public CompletionService<String> getCompletionServices() {
-			return completionServices;
-		}
-    
-	}
 
 	private ConcurrentMap<String, Chat> chats = new ConcurrentHashMap<>();
 	private ConcurrentMap<String, User> users = new ConcurrentHashMap<>();
@@ -90,7 +71,7 @@ public class ChatManager {
 		Chat theChat = null;
 		boolean isChatCreated = false;
 
-		theChat = new Chat(this, name);
+		theChat = new Chat(this, name, taskPerUser);
 		Chat obtainedChat = chats.putIfAbsent(name, theChat);
 		if (null != obtainedChat )
 		{

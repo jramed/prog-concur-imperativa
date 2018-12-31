@@ -5,31 +5,8 @@ import java.util.Collections;
 import java.util.concurrent.CompletionService;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.ExecutorCompletionService;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
 
 public class Chat {
-	
-	private class CustomPair {
-	    private ExecutorService executor;
-	    private CompletionService<String> completionServices;
-	    
-		public CustomPair(ExecutorService executor2, CompletionService<String> completionServices) {
-			super();
-			this.executor = executor2;
-			this.completionServices = completionServices;
-		}
-		public ExecutorService getExecutor() {
-			return executor;
-		}
-
-		public CompletionService<String> getCompletionServices() {
-			return completionServices;
-		}
-    
-	}
 
 	private String name;
 	private ChatManager chatManager;
@@ -38,9 +15,10 @@ public class Chat {
 	private ConcurrentMap<String, CustomPair> taskPerUser = new ConcurrentHashMap<>();
 
 
-	public Chat(ChatManager chatManager, String name) {
+	public Chat(ChatManager chatManager, String name, ConcurrentMap<String, CustomPair> taskPerUser) {
 		this.chatManager = chatManager;
-		this.name = name;		
+		this.name = name;
+		this.taskPerUser = taskPerUser;
 	}
 
 	public String getName() {
@@ -53,11 +31,6 @@ public class Chat {
 		User previousUser = users.putIfAbsent(user.getName(), user);
 		if (previousUser != null) {
 			PrintlnI.printlnI("There was a previous user with the name: " + user.getName(), "");
-		} else {
-			ExecutorService executor = Executors.newSingleThreadExecutor();
-			CompletionService<String> completionService = new ExecutorCompletionService<>(executor);
-			CustomPair pair = new CustomPair(executor,completionService);
-			taskPerUser.putIfAbsent(user.getName(), pair);
 		}
 
 		for(User u : users.values()){
@@ -85,12 +58,6 @@ public class Chat {
 		for(User u : users.values()){
 			taskPerUser.get(u.getName()).getCompletionServices().submit(()->userExitedFromChat(u, user));
 		}
-		
-		CustomPair pair = taskPerUser.get(user.getName());
-		ExecutorService executor = pair.getExecutor();
-		executor.shutdown();
-		executor.awaitTermination(10, TimeUnit.SECONDS);
-		taskPerUser.remove(user.getName(), pair);
 	}
 
 	public Collection<User> getUsers() {
