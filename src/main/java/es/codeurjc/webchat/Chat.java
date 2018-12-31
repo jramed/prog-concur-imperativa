@@ -8,7 +8,6 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutorCompletionService;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 
 public class Chat {
@@ -48,6 +47,8 @@ public class Chat {
 		return name;
 	}
 
+	//From my point of this method should return an error if the user already exist.
+	//The original code it allows to add the same user again, it replace the old one.
 	public void addUser(User user) {
 		User previousUser = users.putIfAbsent(user.getName(), user);
 		if (previousUser != null) {
@@ -59,21 +60,18 @@ public class Chat {
 			taskPerUser.putIfAbsent(user.getName(), pair);
 		}
 
-		// should I use an EM here?
-		//synchronized(users) {
-			for(User u : users.values()){
-				if (!u.getName().equals(user.getName())) {
-					CustomPair pair = taskPerUser.get(u.getName());
-					CompletionService<String> completionService;
-					if (pair != null)
-					{
-						completionService = pair.getCompletionServices();
-						if (completionService != null)
-							completionService.submit(()->newUserInChat(u, user));
-					}
+		for(User u : users.values()){
+			if (!u.getName().equals(user.getName())) {
+				CustomPair pair = taskPerUser.get(u.getName());
+				CompletionService<String> completionService;
+				if (pair != null)
+				{
+					completionService = pair.getCompletionServices();
+					if (completionService != null)
+						completionService.submit(()->newUserInChat(u, user));
 				}
 			}
-		//}
+		}
 	}
 
 	public void removeUser(User user) throws InterruptedException {
@@ -104,7 +102,6 @@ public class Chat {
 	}
 
 	public void sendMessage(User user, String message) {
-		//synchronized (users) {
 		Collection<User> usersColl = this.getUsers();
 		for(User u : usersColl){
 			if (u != user)
@@ -113,7 +110,6 @@ public class Chat {
 				taskPerUser.get(u.getName()).getCompletionServices().submit(()->sendMessageToUser(u, user, message));
 			}
 		}
-		//}
 	}
 
 	public void close() {
