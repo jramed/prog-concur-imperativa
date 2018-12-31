@@ -660,7 +660,7 @@ public class ChatManagerTest {
 		int threshold = 1500;
 		assertTrue("The elapse time between end time "+endTime+" and start time "+startTime+ " is bigger than "+threshold, endTime-startTime < threshold);
 
-		Thread.sleep(1000);
+		Thread.sleep(2000);
 		PrintlnI.printlnI(Arrays.asList(newUserInChatReceivedNotif).toString(),"");
 
 		assertThat("One user with 3 notifications",newUserInChatReceivedNotif.values(),hasItem(3));
@@ -676,15 +676,19 @@ public class ChatManagerTest {
 
 		TestUser user = new TestUser("user"+count) {
 			public void newUserInChat(Chat chat, User user) {
-				PrintlnI.printlnI("TestUSer: "+this.name + ": New user " + user.getName() + " in chat " + chat.getName() +" Number of notif: " + newUSerInChatMsgs.get(user.getName()),"");
+				PrintlnI.printlnI("TestUSer: "+this.name + ": New user " + user.getName() +
+						" in chat " + chat.getName() +
+						" Number of notif: " + newUSerInChatMsgs.get(this.getName()),"");
 				try {
-					Thread.sleep(1);
-					Integer value = newUSerInChatMsgs.putIfAbsent(user.getName(), 1);
+					Thread.sleep(500);
+					Integer value = newUSerInChatMsgs.putIfAbsent(this.getName(), 1);
 					if ( null !=  value) {
-						//This can be done because there is just one thread to handle the notification for an user
-						newUSerInChatMsgs.replace(user.getName(), value+1);
+						//This can be done because there is just one thread
+						//to handle the new user in chat notification for an user
+						newUSerInChatMsgs.replace(this.getName(), value+1);
 					}
-					PrintlnI.printlnI("TestUser: " + this.name + " value: " + newUSerInChatMsgs.get(user.getName()), "");
+					PrintlnI.printlnI("TestUser: " + this.name + " value: " +
+							newUSerInChatMsgs.get(this.getName()), "");
 				} catch (InterruptedException intExcep)
 				{
 					PrintlnI.printlnI("Exception received: " + intExcep.toString(),"");
