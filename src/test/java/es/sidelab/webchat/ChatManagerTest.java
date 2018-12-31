@@ -728,10 +728,11 @@ public class ChatManagerTest {
 		}
 		return user.getName();
 	}
+
 	@Test
 	public void removeUserFromChatCheckMsgReception() throws InterruptedException, TimeoutException, ExecutionException {
 
-		System.out.println("==============NEW test addNewUserToChatCheckMsgReception=====================");
+		System.out.println("==============NEW test removeUserFromChatCheckMsgReception=====================");
 		// Crear el chat Manager
 		final ChatManager chatManager = new ChatManager(5);
 
@@ -793,7 +794,6 @@ public class ChatManagerTest {
 
 		PrintlnI.reset();
 	}
-
 
 	private String checkMsgWhenUserRemoveFromChat(int count, ChatManager chatManager,
 			ConcurrentMap<String, Integer> removeUserFromChatMsgs, int numThreads,
