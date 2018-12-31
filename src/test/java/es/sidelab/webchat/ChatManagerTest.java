@@ -788,8 +788,6 @@ public class ChatManagerTest {
 		//Thread.sleep(2000);
 		PrintlnI.printlnI(Arrays.asList(removeUserFromChatReceivedNotif).toString(),"");
 
-		//assertThat("One user with 3 notifications",removeUserFromChatReceivedNotif.values(),hasItem(3));
-		//assertThat("One user with 2 notifications",removeUserFromChatReceivedNotif.values(),hasItem(2));
 		assertThat("At least one user with 1 notifications",removeUserFromChatReceivedNotif.values(),everyItem(is(1)));
 
 		PrintlnI.reset();
@@ -847,6 +845,125 @@ public class ChatManagerTest {
 			controlNotifPerUser.get(user.getName()).await(2000L, TimeUnit.MILLISECONDS);
 			PrintlnI.printlnI("Finished countdown for user " + user.getName() +
 					" with value: " +controlNotifPerUser.get(user.getName()).getCount(),"");
+		}
+		return user.getName();
+	}
+
+
+	@Test
+	public void sendMsgToUsersInChat() throws InterruptedException, TimeoutException, ExecutionException {
+
+		System.out.println("==============NEW test sendMsgToUsersInaChat=====================");
+		// Crear el chat Manager
+		final ChatManager chatManager = new ChatManager(5);
+
+		int numThreads = 4;
+
+		ExecutorService executor = Executors.newFixedThreadPool(numThreads);
+		CompletionService<String> completionService = new ExecutorCompletionService<>(executor);
+		final ConcurrentMap<String, Integer> userReceptionMsg = new ConcurrentHashMap<>();
+		//The countDownLatch is used to guarantee the correct number of notification are received
+		//for a given user.
+		ConcurrentMap<String, CountDownLatch> controlNotifPerUser = new ConcurrentHashMap<>();
+
+		PrintlnI.initPerThread();
+
+		long startTime = System.currentTimeMillis();
+		for (int i = 0; i < numThreads; ++i) {
+			final int count = i;
+			PrintlnI.initPerThread();
+			completionService.submit(()->checkMsgSentToOtherUsersInChat(count, chatManager, userReceptionMsg, numThreads, controlNotifPerUser));
+		}
+
+
+		String[] returnedValues = new String[numThreads];
+		for (int i = 0; i < numThreads; ++i) {
+			try {
+				// Crear un usuario que guarda en chatName el nombre del nuevo chat
+				Future<String> f = completionService.take();
+				returnedValues[i] = f.get();
+				System.out.println("The returned value from the Thread is: "+ Arrays.asList(returnedValues[i]).toString());
+			} catch (ConcurrentModificationException e) {
+				System.out.println("Exception: " + e.toString());
+				assertTrue("Exception received" + e.toString(), false);
+			} catch (InterruptedException e) {
+				System.out.println("Exception: " + e.toString());
+				assertTrue("Exception received" + e.toString(), false);
+			} catch (ExecutionException e) {
+				System.out.println("Exception: " + e.toString());
+				e.printStackTrace();
+				assertTrue("Exception received" + e.toString(), false);
+			}
+		}
+
+		executor.shutdown();
+
+		executor.awaitTermination(10, TimeUnit.SECONDS);
+
+		long endTime = System.currentTimeMillis();
+		long difference = endTime-startTime;
+		PrintlnI.printlnI("startTime: "+startTime+ " endTime: "+endTime+" difference: "+ difference ,"");
+		int threshold = 1500;
+		assertTrue("The elapse time between end time "+endTime+" and start time "+startTime+ " is bigger than "+threshold, endTime-startTime < threshold);
+
+		PrintlnI.printlnI(Arrays.asList(userReceptionMsg).toString(),"");
+
+		assertThat("At least one user with 1 notifications",userReceptionMsg.values(),everyItem(is(1)));
+
+		PrintlnI.reset();
+	}
+
+	private String checkMsgSentToOtherUsersInChat(int count, ChatManager chatManager,
+			ConcurrentMap<String, Integer> newMsgReceived, int numThreads,
+			ConcurrentMap<String, CountDownLatch> controlNotifPerUser) throws InterruptedException, TimeoutException {
+
+		TestUser user = new TestUser("user"+count) {
+			public void newMessage(Chat chat, User user, String message) {
+				PrintlnI.printlnI("TestUSer: "+this.name + ": msg received from user " + user.getName() +
+						" in chat " + chat.getName() +
+						" Number of msgs: " + newMsgReceived.get(this.getName()) +
+						" msg received: " + message,"");
+				try {
+					//to simulate a dealy in the handling of the notification
+					Thread.sleep(500);
+					Integer value = newMsgReceived.putIfAbsent(this.getName(), 1);
+					if ( null !=  value) {
+						//This can be done because there is just one thread
+						//to handle the new user in chat notification for an user
+						newMsgReceived.replace(this.getName(), value+1);
+					}
+					PrintlnI.printlnI("TestUser: " + this.name + " value: " +
+							newMsgReceived.get(this.getName()), "");
+				} catch (InterruptedException intExcep)
+				{
+					PrintlnI.printlnI("Exception received: " + intExcep.toString(),"");
+					intExcep.printStackTrace();
+				}
+				controlNotifPerUser.get(this.getName()).countDown();
+				PrintlnI.printlnI("CountDown for user " + this.getName(),"");
+			}
+
+		};
+
+		if (count+1 != numThreads) {
+			int countDown = 1;
+			controlNotifPerUser.putIfAbsent(user.getName(), new CountDownLatch(countDown));
+			PrintlnI.printlnI("Set CountDown for user " + user.getName()+ " with value: " + countDown,"");
+		}
+		chatManager.newUser(user);
+
+		Chat chat = chatManager.newChat("Chat", 5, TimeUnit.SECONDS);
+		Chat chat2 = chatManager.newChat("Chat2", 5, TimeUnit.SECONDS);
+
+		chat.addUser(user);
+		chat2.addUser(user);
+		Thread.sleep(count*100);
+		if (count+1 != numThreads) {
+			controlNotifPerUser.get(user.getName()).await(2000L, TimeUnit.MILLISECONDS);
+			PrintlnI.printlnI("Finished countdown for user " + user.getName() +
+					" with value: " +controlNotifPerUser.get(user.getName()).getCount(),"");
+		} else {
+			chat.sendMessage(user, "message from "+user.getName());
 		}
 		return user.getName();
 	}
