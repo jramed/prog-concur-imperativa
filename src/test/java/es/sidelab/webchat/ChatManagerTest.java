@@ -619,6 +619,9 @@ public class ChatManagerTest {
 		ExecutorService executor = Executors.newFixedThreadPool(numThreads);
 		CompletionService<String> completionService = new ExecutorCompletionService<>(executor);
 		final ConcurrentMap<String, Integer> newUserInChatReceivedNotif = new ConcurrentHashMap<>();
+		//The countDownLatch is used to guarantee the correct number of notification are received
+		//for a given user.
+		ConcurrentMap<String, CountDownLatch> controlNotifPerUser = new ConcurrentHashMap<>();
 
 		PrintlnI.initPerThread();
 
@@ -626,7 +629,7 @@ public class ChatManagerTest {
 		for (int i = 0; i < numThreads; ++i) {
 			final int count = i;
 			PrintlnI.initPerThread();
-			completionService.submit(()->checkMsgWhenUserAddToChat(count, chatManager, newUserInChatReceivedNotif, numThreads));
+			completionService.submit(()->checkMsgWhenUserAddToChat(count, chatManager, newUserInChatReceivedNotif, numThreads, controlNotifPerUser));
 		}
 
 
@@ -657,14 +660,15 @@ public class ChatManagerTest {
 		long endTime = System.currentTimeMillis();
 		long difference = endTime-startTime;
 		PrintlnI.printlnI("startTime: "+startTime+ " endTime: "+endTime+" difference: "+ difference ,"");
-		int threshold = 1500;
+		int threshold = 2000;
 		assertTrue("The elapse time between end time "+endTime+" and start time "+startTime+ " is bigger than "+threshold, endTime-startTime < threshold);
 
-		Thread.sleep(2000);
+		//Thread.sleep(2000);
 		PrintlnI.printlnI(Arrays.asList(newUserInChatReceivedNotif).toString(),"");
 
 		assertThat("One user with 3 notifications",newUserInChatReceivedNotif.values(),hasItem(3));
 		assertThat("One user with 2 notifications",newUserInChatReceivedNotif.values(),hasItem(2));
+		//in some test could happen that two users have one notification. That is right.
 		assertThat("At least one user with 1 notifications",newUserInChatReceivedNotif.values(),hasItem(1));
 
 		PrintlnI.reset();
@@ -672,7 +676,8 @@ public class ChatManagerTest {
 
 
 	private String checkMsgWhenUserAddToChat(int count, ChatManager chatManager,
-			ConcurrentMap<String, Integer> newUSerInChatMsgs, int numThreads ) throws InterruptedException, TimeoutException {
+			ConcurrentMap<String, Integer> newUSerInChatMsgs, int numThreads,
+			ConcurrentMap<String, CountDownLatch> controlNotifPerUser) throws InterruptedException, TimeoutException {
 
 		TestUser user = new TestUser("user"+count) {
 			public void newUserInChat(Chat chat, User user) {
@@ -680,6 +685,7 @@ public class ChatManagerTest {
 						" in chat " + chat.getName() +
 						" Number of notif: " + newUSerInChatMsgs.get(this.getName()),"");
 				try {
+					//to simulate a dealy in the handling of the notification
 					Thread.sleep(500);
 					Integer value = newUSerInChatMsgs.putIfAbsent(this.getName(), 1);
 					if ( null !=  value) {
@@ -694,16 +700,30 @@ public class ChatManagerTest {
 					PrintlnI.printlnI("Exception received: " + intExcep.toString(),"");
 					intExcep.printStackTrace();
 				}
+				controlNotifPerUser.get(this.getName()).countDown();
+				PrintlnI.printlnI("CountDown for user " + this.getName(),"");
 			}
 
 		};
 
+		if (count+1 != numThreads) {
+			controlNotifPerUser.putIfAbsent(user.getName(), new CountDownLatch(numThreads-count-1));
+			PrintlnI.printlnI("Set CountDown for user " + user.getName()+ " with value: " + (numThreads-count-1),"");
+		}
 		chatManager.newUser(user);
 
 		Chat chat = chatManager.newChat("Chat", 5, TimeUnit.SECONDS);
-		Thread.sleep(count*10);
-		chat.addUser(user);
+		//This sleep is to guarantee the execution order. If not in some executions
+		//due to different execution speed the distribution of the notification is
+		//different, although those are also right
+		Thread.sleep(count*100);
 
+		chat.addUser(user);
+		if (count+1 != numThreads) {
+			controlNotifPerUser.get(user.getName()).await(2000L, TimeUnit.MILLISECONDS);
+			PrintlnI.printlnI("Finished countdown for user " + user.getName() +
+					" with value: " +controlNotifPerUser.get(user.getName()).getCount(),"");
+		}
 		return user.getName();
 	}
 
