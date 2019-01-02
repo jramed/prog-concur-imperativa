@@ -10,6 +10,9 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.locks.Condition;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 public class ChatManager {
 
@@ -17,6 +20,8 @@ public class ChatManager {
 	private ConcurrentMap<String, User> users = new ConcurrentHashMap<>();
 	private ConcurrentMap<String, CustomPair> taskPerUser = new ConcurrentHashMap<>();
 	private int maxChats;
+	private Lock lock = new ReentrantLock();
+	private Condition condition = lock.newCondition();
 
 	public ChatManager(int maxChats) {
 		this.maxChats = maxChats;
@@ -53,33 +58,33 @@ public class ChatManager {
 
 	public Chat newChat(String name, long timeout, TimeUnit unit) throws InterruptedException,
 			TimeoutException {
-
-		boolean mayThrow = false;
-		mayThrow = chats.size() == maxChats ? true :false;
 		
-		//If this part in synchronized, the exception throwing can consume some time
-		//It is better to have it out of the mutual exclusion zone even if the situation 
-		//can change between the checking and the exception throw. However, with this same
-		//point of view, there is no need for synchronize the reading of the size.
-		if (mayThrow) {
-			throw new TimeoutException("There is no enought capacity to create a new chat");
-		}
-
-
-		Chat theChat = null;
 		boolean isChatCreated = false;
+		Chat theChat = null;
+		try {
+			lock.lock();
+			boolean mayWait = true;
+			mayWait = chats.size() == maxChats ? true :false;
 
-		theChat = new Chat(this, name, taskPerUser);
-		Chat obtainedChat = chats.putIfAbsent(name, theChat);
-		if (null != obtainedChat )
-		{
-			PrintlnI.printlnI("Chat: "+name+" already created.","");
-			return obtainedChat;
-		} else {
-			isChatCreated = true;
-			PrintlnI.printlnI("Creating chat: "+name, "");
+			while (mayWait) {
+				condition.await(timeout, unit);
+				mayWait = chats.size() == maxChats ? true :false;
+			}
+
+			theChat = new Chat(this, name, taskPerUser);
+			Chat obtainedChat = chats.putIfAbsent(name, theChat);
+			if (null != obtainedChat )
+			{
+				PrintlnI.printlnI("Chat: "+name+" already created.","");
+				return obtainedChat;
+			} else {
+				isChatCreated = true;
+				PrintlnI.printlnI("Creating chat: "+name, "");
+			}
+		} finally {
+			lock.unlock();
 		}
-		
+
 		if (isChatCreated) {
 			final Chat theUsedChat = theChat;
 			//this is quite similar to the code in closeChat
@@ -117,6 +122,9 @@ public class ChatManager {
 					completionService.submit(()->notifyClosedChat(u,theUsedChat));
 			}
 		}
+		lock.lock();
+		condition.signal();
+		lock.unlock();
 	}
 
 	public Collection<Chat> getChats() {
