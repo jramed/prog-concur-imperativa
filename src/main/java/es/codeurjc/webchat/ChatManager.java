@@ -66,23 +66,27 @@ public class ChatManager {
 			boolean mayWait = true;
 			mayWait = chats.size() == maxChats ? true :false;
 
+			//spurious wakeup control
 			while (mayWait) {
-				condition.await(timeout, unit);
+				if ( false == condition.await(timeout, unit)) {
+					throw new TimeoutException("Timeout waiting for chat creation. \'"
+							+"Time: " + timeout + " Unit: " + unit + "\'");
+				}
 				mayWait = chats.size() == maxChats ? true :false;
-			}
-
-			theChat = new Chat(this, name, taskPerUser);
-			Chat obtainedChat = chats.putIfAbsent(name, theChat);
-			if (null != obtainedChat )
-			{
-				PrintlnI.printlnI("Chat: "+name+" already created.","");
-				return obtainedChat;
-			} else {
-				isChatCreated = true;
-				PrintlnI.printlnI("Creating chat: "+name, "");
 			}
 		} finally {
 			lock.unlock();
+		}
+
+		theChat = new Chat(this, name, taskPerUser);
+		Chat obtainedChat = chats.putIfAbsent(name, theChat);
+		if (null != obtainedChat )
+		{
+			PrintlnI.printlnI("Chat: "+name+" already created.","");
+			return obtainedChat;
+		} else {
+			isChatCreated = true;
+			PrintlnI.printlnI("Creating chat: "+name, "");
 		}
 
 		if (isChatCreated) {
