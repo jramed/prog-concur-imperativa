@@ -2,7 +2,6 @@ package es.sidelab.webchat;
 
 import static org.hamcrest.CoreMatchers.everyItem;
 import static org.hamcrest.CoreMatchers.hasItem;
-import static org.hamcrest.CoreMatchers.hasItems;
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
@@ -23,6 +22,7 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
+import org.junit.Ignore;
 import org.junit.Test;
 
 import es.codeurjc.webchat.Chat;
@@ -189,7 +189,7 @@ public class ChatManagerTest {
 		{
 			final int count = i;
 			PrintlnI.initPerThread();
-			completionService.submit(()->simulateUserParallelTest(count, hasUserSentReceiveMsg, chatManager, chat));
+			completionService.submit(()->simulateUserParallelTest(count, hasUserSentReceiveMsg, chatManager, chat, numThreads));
 		}
 
 		//4 thread for 4 users
@@ -239,14 +239,16 @@ public class ChatManagerTest {
 	}
 
 
-	private String simulateUserParallelTest(int count, Boolean[] hasUserSentReceiveMsg, ChatManager chatManager, Chat chat) throws
+	private String simulateUserParallelTest(int count, Boolean[] hasUserSentReceiveMsg,
+			ChatManager chatManager, Chat chat, int numThreads) throws
 								InterruptedException, TimeoutException {
 
 		TestUser user = new TestUser("user"+count) {
 			public void newMessage(Chat chat, User user, String message) {
-				hasUserSentReceiveMsg[count] = true;
+				PrintlnI.printlnI("User: " + this.name +", new message: "+message +" for thread number: " +count, "");
 				try {
 					Thread.sleep(1000);
+					hasUserSentReceiveMsg[count] = true;
 				} catch (InterruptedException intExcep)
 				{
 					PrintlnI.printlnI("Exception received: " + intExcep.toString(),"");
@@ -265,12 +267,14 @@ public class ChatManagerTest {
 		// Crear un nuevo chat en el chatManager
 		chat.addUser(user);
 
-		if (count == 0)
+		if (count+1 == numThreads)
 		{
+			//to ensure the destination users have been created
+			Thread.sleep(10);
 			chat.sendMessage(user, "Message from user: "+user.getName());
 			try
 			{
-				hasUserSentReceiveMsg[count] = latch.await(2000L,TimeUnit.MILLISECONDS);
+				hasUserSentReceiveMsg[count] = latch.await(5000L,TimeUnit.MILLISECONDS);
 			}
 			catch (InterruptedException e)
 			{
