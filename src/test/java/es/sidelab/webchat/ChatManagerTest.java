@@ -622,7 +622,7 @@ public class ChatManagerTest {
 		int numThreads = 4;
 
 		ExecutorService executor = Executors.newFixedThreadPool(numThreads);
-		CompletionService<String> completionService = new ExecutorCompletionService<>(executor);
+		CompletionService<User> completionService = new ExecutorCompletionService<>(executor);
 		final ConcurrentMap<String, Integer> newUserInChatReceivedNotif = new ConcurrentHashMap<>();
 		//The countDownLatch is used to guarantee the correct number of notification are received
 		//for a given user.
@@ -638,13 +638,13 @@ public class ChatManagerTest {
 		}
 
 
-		String[] returnedValues = new String[numThreads];
+		User[] returnedValues = new User[numThreads];
 		for (int i = 0; i < numThreads; ++i) {
 			try {
 				// Crear un usuario que guarda en chatName el nombre del nuevo chat
-				Future<String> f = completionService.take();
+				Future<User> f = completionService.take();
 				returnedValues[i] = f.get();
-				System.out.println("The returned value from the Thread is: "+ Arrays.asList(returnedValues[i]).toString());
+				System.out.println("The returned value from the Thread is: "+ Arrays.asList(returnedValues[i].getName()).toString());
 			} catch (ConcurrentModificationException e) {
 				System.out.println("Exception: " + e.toString());
 				assertTrue("Exception received" + e.toString(), false);
@@ -677,10 +677,13 @@ public class ChatManagerTest {
 		assertThat("At least one user with 1 notifications",newUserInChatReceivedNotif.values(),hasItem(1));
 
 		PrintlnI.reset();
+		for (User u: returnedValues) {
+			chatManager.removeUser(u);
+		}
 	}
 
 
-	private String checkMsgWhenUserAddToChat(int count, ChatManager chatManager,
+	private User checkMsgWhenUserAddToChat(int count, ChatManager chatManager,
 			ConcurrentMap<String, Integer> newUSerInChatMsgs, int numThreads,
 			ConcurrentMap<String, CountDownLatch> controlNotifPerUser) throws InterruptedException, TimeoutException {
 
@@ -729,7 +732,8 @@ public class ChatManagerTest {
 			PrintlnI.printlnI("Finished countdown for user " + user.getName() +
 					" with value: " +controlNotifPerUser.get(user.getName()).getCount(),"");
 		}
-		return user.getName();
+		chat.removeUser(user);
+		return user;
 	}
 
 	@Test
