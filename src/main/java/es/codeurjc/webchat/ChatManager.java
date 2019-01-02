@@ -43,23 +43,21 @@ public class ChatManager {
 		}
 		
 		CustomPair pair = taskPerUser.get(user.getName());
-		ExecutorService executor = pair.getExecutor();
-		executor.shutdown();
-		executor.awaitTermination(10, TimeUnit.SECONDS);
-		taskPerUser.remove(user.getName(), pair);
+		if ( null != pair ) {
+			ExecutorService executor = pair.getExecutor();
+			executor.shutdown();
+			executor.awaitTermination(2, TimeUnit.SECONDS);
+			taskPerUser.remove(user.getName(), pair);
+		}
 	}
 
 	public Chat newChat(String name, long timeout, TimeUnit unit) throws InterruptedException,
 			TimeoutException {
 
-		//A new user could be been added while the checking is done
-		//
 		boolean mayThrow = false;
-		//synchronized (chats) {
-			mayThrow = chats.size() == maxChats ? true :false;
-		//}
+		mayThrow = chats.size() == maxChats ? true :false;
 		
-		//If this part in synchronized as well, the exception throwing can consume some time
+		//If this part in synchronized, the exception throwing can consume some time
 		//It is better to have it out of the mutual exclusion zone even if the situation 
 		//can change between the checking and the exception throw. However, with this same
 		//point of view, there is no need for synchronize the reading of the size.
@@ -87,10 +85,9 @@ public class ChatManager {
 			//this is quite similar to the code in closeChat
 			for(User u : users.values()){
 				CustomPair pair = taskPerUser.get(u.getName());
-				CompletionService<String> completionService;
 				if (pair != null)
 				{
-					completionService = pair.getCompletionServices();
+					CompletionService<String> completionService = pair.getCompletionServices();
 					if (completionService != null)
 						completionService.submit(()->notifyNewChat(u,theUsedChat));
 				}
@@ -123,22 +120,18 @@ public class ChatManager {
 	}
 
 	public Collection<Chat> getChats() {
-		//TODO should it be included in a mutual exclusion zone?
 		return Collections.unmodifiableCollection(chats.values());
 	}
 
 	public Chat getChat(String chatName) {
-		//TODO add mutual exclusion protection
 		return chats.get(chatName);
 	}
 
 	public Collection<User> getUsers() {
-		//TODO should it be included in a mutual exclusion zone?
 		return Collections.unmodifiableCollection(users.values());
 	}
 
 	public User getUser(String userName) {
-		//TODO add mutual exclusion protection
 		return users.get(userName);
 	}
 
