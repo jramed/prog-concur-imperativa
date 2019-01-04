@@ -61,10 +61,12 @@ public class ChatManager {
 		
 		boolean isChatCreated = false;
 		Chat theChat = null;
+		Chat obtainedChat = null;
 		try {
 			lock.lock();
 			boolean mayWait = true;
 			mayWait = chats.size() == maxChats ? true :false;
+			//PrintlnI.printlnI("The chats size is: "+chats.size(), "");
 
 			//spurious wakeup control
 			while (mayWait) {
@@ -73,13 +75,14 @@ public class ChatManager {
 							+"Time: " + timeout + " Unit: " + unit + "\'");
 				}
 				mayWait = chats.size() == maxChats ? true :false;
+				PrintlnI.printlnI("Inside the While. The chats size is: "+chats.size(), "");
 			}
+			theChat = new Chat(this, name, taskPerUser);
+			obtainedChat = chats.putIfAbsent(name, theChat);
 		} finally {
 			lock.unlock();
 		}
 
-		theChat = new Chat(this, name, taskPerUser);
-		Chat obtainedChat = chats.putIfAbsent(name, theChat);
 		if (null != obtainedChat )
 		{
 			PrintlnI.printlnI("Chat: "+name+" already created.","");
