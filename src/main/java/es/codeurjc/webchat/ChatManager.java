@@ -70,6 +70,8 @@ public class ChatManager {
 
 			//spurious wakeup control
 			while (mayWait) {
+				//this solution could make that the timeoutException delay more than timeout
+				//It is not guarantee which thread will be awaken when the condition is signaled
 				if ( false == condition.await(timeout, unit)) {
 					throw new TimeoutException("Timeout waiting for chat creation. \'"
 							+"Time: " + timeout + " Unit: " + unit + "\'");
@@ -110,12 +112,18 @@ public class ChatManager {
 
 	public void closeChat(Chat chat) {
 		//The remove operation is performed atomically
+		//does not make sense use lock because the signal is sent
+		//afterwards and between the remove and the signal could be
+		//an exception throw
 		Chat removedChat = chats.remove(chat.getName());
 		if (removedChat == null) {
 			throw new IllegalArgumentException("Trying to remove an unknown chat with name \'"
 					+ chat.getName() + "\'");
 		}
 
+		lock.lock();
+		condition.signal();
+		lock.unlock();
 
 		final Chat theUsedChat = removedChat;
 		//this is quite similar to the code in newChat
@@ -129,9 +137,6 @@ public class ChatManager {
 					completionService.submit(()->notifyClosedChat(u,theUsedChat));
 			}
 		}
-		lock.lock();
-		condition.signal();
-		lock.unlock();
 	}
 
 	public Collection<Chat> getChats() {
