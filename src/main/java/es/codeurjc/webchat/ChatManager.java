@@ -20,8 +20,8 @@ public class ChatManager {
 	private ConcurrentMap<String, User> users = new ConcurrentHashMap<>();
 	private ConcurrentMap<String, CustomPair> taskPerUser = new ConcurrentHashMap<>();
 	private int maxChats;
-	private Lock lock = new ReentrantLock();
-	private Condition condition = lock.newCondition();
+	private Lock chatCreationLock = new ReentrantLock();
+	private Condition chatCreationCondition = chatCreationLock.newCondition();
 
 	public ChatManager(int maxChats) {
 		this.maxChats = maxChats;
@@ -63,7 +63,7 @@ public class ChatManager {
 		Chat theChat = null;
 		Chat obtainedChat = null;
 		try {
-			lock.lock();
+			chatCreationLock.lock();
 			boolean mayWait = true;
 			mayWait = chats.size() == maxChats ? true :false;
 			//PrintlnI.printlnI("The chats size is: "+chats.size(), "");
@@ -71,8 +71,10 @@ public class ChatManager {
 			//spurious wakeup control
 			while (mayWait) {
 				//this solution could make that the timeoutException delay more than timeout
+				//this could be avoided controlling the time elapses from the first previous try.
+				//The unit should be always the same and at least milliseconds
 				//It is not guarantee which thread will be awaken when the condition is signaled
-				if ( false == condition.await(timeout, unit)) {
+				if ( false == chatCreationCondition.await(timeout, unit)) {
 					throw new TimeoutException("Timeout waiting for chat creation. \'"
 							+"Time: " + timeout + " Unit: " + unit + "\'");
 				}
@@ -82,7 +84,7 @@ public class ChatManager {
 			theChat = new Chat(this, name, taskPerUser);
 			obtainedChat = chats.putIfAbsent(name, theChat);
 		} finally {
-			lock.unlock();
+			chatCreationLock.unlock();
 		}
 
 		if (null != obtainedChat )
@@ -121,9 +123,9 @@ public class ChatManager {
 					+ chat.getName() + "\'");
 		}
 
-		lock.lock();
-		condition.signal();
-		lock.unlock();
+		chatCreationLock.lock();
+		chatCreationCondition.signal();
+		chatCreationLock.unlock();
 
 		final Chat theUsedChat = removedChat;
 		//this is quite similar to the code in newChat
