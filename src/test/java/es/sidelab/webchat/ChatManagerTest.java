@@ -996,6 +996,8 @@ public class ChatManagerTest {
 		PrintlnI.initPerThread();
 
 		long startTime = System.currentTimeMillis();
+		//Create a thread per user to test concurrent chat creation.
+
 		for (int i = 0; i < numThreads; ++i) {
 			final int count = i;
 			PrintlnI.initPerThread();
@@ -1017,7 +1019,7 @@ public class ChatManagerTest {
 			} catch (ExecutionException e) {
 				System.out.println("Exception: " + e.toString());
 				e.printStackTrace();
-				assertThat(e.getMessage(), containsString("Time: 3 Unit: SECONDS"));
+				assertThat(e.getMessage(), containsString("java.util.concurrent.TimeoutException: Timeout waiting for chat creation. 'Time: 3 Unit: SECONDS'"));
 			}
 		}
 
@@ -1028,7 +1030,7 @@ public class ChatManagerTest {
 		long endTime = System.currentTimeMillis();
 		long difference = endTime-startTime;
 		PrintlnI.printlnI("startTime: "+startTime+ " endTime: "+endTime+" difference: "+ difference ,"");
-		int threshold = 3100;
+		int threshold = 3500;
 		assertTrue("The elapse time between end time "+endTime+" and start time "+startTime+ " is bigger than "+threshold, endTime-startTime < threshold);
 
 		PrintlnI.reset();
@@ -1038,11 +1040,8 @@ public class ChatManagerTest {
 			int numThreads) throws InterruptedException, TimeoutException {
 		TestUser user = new TestUser("user"+count);
 
-		//try {
-			chatManager.newChat("Chat"+count, 3, TimeUnit.SECONDS);
-		/*} catch (TimeoutException e) {
+		chatManager.newChat("Chat"+count, 3, TimeUnit.SECONDS);
 
-		}*/
 		return user.getName();
 	}
 
