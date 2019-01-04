@@ -2,6 +2,8 @@ package es.codeurjc.webchat;
 
 import java.util.Collection;
 import java.util.Collections;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CompletionService;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -10,7 +12,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
-import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -20,11 +21,13 @@ public class ChatManager {
 	private ConcurrentMap<String, User> users = new ConcurrentHashMap<>();
 	private ConcurrentMap<String, CustomPair> taskPerUser = new ConcurrentHashMap<>();
 	private int maxChats;
+	private BlockingQueue<Integer> queue;
 	private Lock lock = new ReentrantLock();
-	private Condition condition = lock.newCondition();
+	private int threadsWaiting = 0;
 
 	public ChatManager(int maxChats) {
 		this.maxChats = maxChats;
+		this.queue = new ArrayBlockingQueue<Integer>(maxChats);
 	}
 
 	public void newUser(User user) {
@@ -58,29 +61,30 @@ public class ChatManager {
 
 	public Chat newChat(String name, long timeout, TimeUnit unit) throws InterruptedException,
 			TimeoutException {
-		
-		boolean isChatCreated = false;
+
 		Chat theChat = null;
 		Chat obtainedChat = null;
+		boolean isChatCreated = false;
+
 		try {
 			lock.lock();
-			boolean mayWait = true;
-			mayWait = chats.size() == maxChats ? true :false;
-			//PrintlnI.printlnI("The chats size is: "+chats.size(), "");
+			boolean mayWait = chats.size() == maxChats ? true :false;
 
-			//spurious wakeup control
-			while (mayWait) {
-				//this solution could make that the timeoutException delay more than timeout
-				//It is not guarantee which thread will be awaken when the condition is signaled
-				if ( false == condition.await(timeout, unit)) {
+			if (mayWait) {
+				threadsWaiting++;
+				PrintlnI.printlnI("Waiting for chat creation", "");
+				//ERROR!! This leave locked the variable, so any other thread can change the queue
+				if (null == queue.poll(timeout, unit)) {
+					threadsWaiting--;
 					throw new TimeoutException("Timeout waiting for chat creation. \'"
 							+"Time: " + timeout + " Unit: " + unit + "\'");
 				}
-				mayWait = chats.size() == maxChats ? true :false;
-				PrintlnI.printlnI("Inside the While. The chats size is: "+chats.size(), "");
+				threadsWaiting--;
 			}
+
 			theChat = new Chat(this, name, taskPerUser);
 			obtainedChat = chats.putIfAbsent(name, theChat);
+			PrintlnI.printlnI("The chats size is: "+chats.size(), "");
 		} finally {
 			lock.unlock();
 		}
@@ -111,19 +115,24 @@ public class ChatManager {
 	}
 
 	public void closeChat(Chat chat) {
-		//The remove operation is performed atomically
-		//does not make sense use lock because the signal is sent
-		//afterwards and between the remove and the signal could be
-		//an exception throw
-		Chat removedChat = chats.remove(chat.getName());
-		if (removedChat == null) {
-			throw new IllegalArgumentException("Trying to remove an unknown chat with name \'"
-					+ chat.getName() + "\'");
-		}
 
-		lock.lock();
-		condition.signal();
-		lock.unlock();
+		Chat removedChat = null;
+		try {
+			lock.lock();
+			removedChat = chats.remove(chat.getName());
+			if (removedChat == null) {
+				throw new IllegalArgumentException("Trying to remove an unknown chat with name \'"
+						+ chat.getName() + "\'");
+			}
+
+			if (chats.size() == maxChats-1 && threadsWaiting > 0) {
+				queue.put(1);
+			}
+		} catch (InterruptedException e ) {
+			e.printStackTrace();
+		} finally {
+			lock.unlock();
+		}
 
 		final Chat theUsedChat = removedChat;
 		//this is quite similar to the code in newChat
