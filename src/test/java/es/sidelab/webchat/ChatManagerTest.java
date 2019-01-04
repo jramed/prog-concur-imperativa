@@ -1112,4 +1112,69 @@ public class ChatManagerTest {
 		return user.getName();
 	}
 
+	@Test
+	public void chatCreationRemoval() throws InterruptedException, TimeoutException, ExecutionException {
+
+		System.out.println("==============NEW test chatCreationRemoval=====================");
+		final ChatManager chatManager = new ChatManager(1);
+
+		int numThreads = 10;
+
+		ExecutorService executor = Executors.newFixedThreadPool(numThreads);
+		CompletionService<String> completionService = new ExecutorCompletionService<>(executor);
+
+		PrintlnI.initPerThread();
+
+		long startTime = System.currentTimeMillis();
+		//Create a thread per user to test concurrent chat creation.
+
+		for (int i = 0; i < numThreads; ++i) {
+			final int count = i;
+			PrintlnI.initPerThread();
+			completionService.submit(()->checkChatCreationRemoval(count, chatManager, numThreads));
+		}
+
+		String[] returnedValues = new String[numThreads];
+		for (int i = 0; i < numThreads; ++i) {
+			try {
+				Future<String> f = completionService.take();
+				returnedValues[i] = f.get();
+				System.out.println("The returned value from the Thread is: "+ Arrays.asList(returnedValues[i]).toString());
+			} catch (ConcurrentModificationException e) {
+				System.out.println("Exception: " + e.toString());
+				assertTrue("Exception received" + e.toString(), false);
+			} catch (InterruptedException e) {
+				System.out.println("Exception: " + e.toString());
+				assertTrue("Exception received" + e.toString(), false);
+			} catch (ExecutionException e) {
+				System.out.println("Exception: " + e.toString());
+				e.printStackTrace();
+				assertThat(e.getMessage(), containsString("java.util.concurrent.TimeoutException: Timeout waiting for chat creation. 'Time: 3 Unit: SECONDS'"));
+			}
+		}
+
+		executor.shutdown();
+
+		executor.awaitTermination(10, TimeUnit.SECONDS);
+
+		long endTime = System.currentTimeMillis();
+		long difference = endTime-startTime;
+		PrintlnI.printlnI("startTime: "+startTime+ " endTime: "+endTime+" difference: "+ difference ,"");
+		int threshold = 7000;
+		assertTrue("The elapse time between end time "+endTime+" and start time "+startTime+ " is bigger than "+threshold, endTime-startTime < threshold);
+
+		PrintlnI.reset();
+	}
+
+	private String checkChatCreationRemoval(int count, ChatManager chatManager,
+			int numThreads) throws InterruptedException, TimeoutException {
+		TestUser user = new TestUser("user"+count);
+		TimeUnit.MILLISECONDS.sleep(ThreadLocalRandom.current().nextInt(0, 500 + 1));
+		Chat chat = chatManager.newChat("Chat"+count, 3, TimeUnit.SECONDS);
+		Thread.sleep((long) (Math.random() * 800));
+		chat.close();
+
+		return user.getName();
+	}
+
 }
