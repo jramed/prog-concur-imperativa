@@ -1,6 +1,7 @@
 package es.sidelab.webchat;
 
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.util.Arrays;
 import java.util.ConcurrentModificationException;
@@ -49,25 +50,7 @@ public class ChatManagerMessageOrderCheck {
 			completionService.submit(()->checkMsgOrderTest(count, hasUserSentReceiveMsgInOrder, chatManager, chat, numThreads));
 		}
 
-		String[] returnedValues = new String[numThreads];
-		for (int i = 0; i < numThreads; ++i) {
-			try {
-				Future<String> f = completionService.take();
-				String returnedValue = f.get();
-				returnedValues[i] = returnedValue;
-				System.out.println("The returned value from the Thread is: "+ Arrays.asList(returnedValues[i]).toString());
-			} catch (ConcurrentModificationException e) {
-				System.out.println("Exception: " + e.toString());
-				assertTrue("Exception received" + e.toString(), false);
-			} catch (InterruptedException e) {
-				System.out.println("Exception: " + e.toString());
-				assertTrue("Exception received" + e.toString(), false);
-			} catch (ExecutionException e) {
-				System.out.println("Exception: " + e.toString());
-				e.printStackTrace();
-				assertTrue("Exception received" + e.toString(), false);
-			}
-		}
+		serviceInvocation(numThreads, completionService);
 
 		executor.shutdown();
 
@@ -82,6 +65,29 @@ public class ChatManagerMessageOrderCheck {
 				+ Arrays.asList(hasUserSentReceiveMsgInOrder).toString(), Arrays.equals(hasUserSentReceiveMsgInOrder, valuesToCheck));
 
 		PrintlnI.reset();
+	}
+
+
+	private void serviceInvocation(int numThreads, CompletionService<String> completionService) {
+		String[] returnedValues = new String[numThreads];
+		for (int i = 0; i < numThreads; ++i) {
+			try {
+				Future<String> f = completionService.take();
+				String returnedValue = f.get();
+				returnedValues[i] = returnedValue;
+				System.out.println("The returned value from the Thread is: "+ Arrays.asList(returnedValues[i]).toString());
+			} catch (ConcurrentModificationException e) {
+				System.out.println("Exception: " + e.toString());
+				fail("Exception received" + e.toString());
+			} catch (InterruptedException e) {
+				System.out.println("Exception: " + e.toString());
+				fail("Exception received" + e.toString());
+			} catch (ExecutionException e) {
+				System.out.println("Exception: " + e.toString());
+				e.printStackTrace();
+				fail("Exception received" + e.toString());
+			}
+		}
 	}
 
 
