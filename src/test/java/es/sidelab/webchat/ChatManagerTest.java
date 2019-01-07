@@ -1,6 +1,7 @@
 package es.sidelab.webchat;
 
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.util.Arrays;
 import java.util.ConcurrentModificationException;
@@ -46,21 +47,20 @@ public class ChatManagerTest {
 		String[][] returnedValues = new String[numThreads][5];
 		for (int i = 0; i < numThreads; ++i) {
 			try {
-				// Crear un usuario que guarda en chatName el nombre del nuevo chat
 				Future<String[]> f = completionService.take();
 				String[] returnedValue = f.get();
 				returnedValues[i] = returnedValue;
 				System.out.println("The returned value from the Thread is: "+ Arrays.asList(returnedValues[i]).toString());
 			} catch (ConcurrentModificationException e) {
 				System.out.println("Exception: " + e.toString());
-				assertTrue("Exception received" + e.toString(), false);
+				fail("Exception received" + e.toString());
 			} catch (InterruptedException e) {
 				System.out.println("Exception: " + e.toString());
-				assertTrue("Exception received" + e.toString(), false);
+				fail("Exception received" + e.toString());
 			} catch (ExecutionException e) {
 				System.out.println("Exception: " + e.toString());
 				e.printStackTrace();
-				assertTrue("Exception received" + e.toString(), false);
+				fail("Exception received" + e.toString());
 			}
 		}
 
