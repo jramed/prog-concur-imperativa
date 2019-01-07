@@ -5,6 +5,7 @@ import static org.hamcrest.CoreMatchers.hasItem;
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.util.Arrays;
 import java.util.ConcurrentModificationException;
@@ -89,14 +90,14 @@ public class ChatManagerImprovement5 {
 				System.out.println("The returned value from the Thread is: "+ Arrays.asList(returnedValues[i]).toString());
 			} catch (ConcurrentModificationException e) {
 				System.out.println("Exception: " + e.toString());
-				assertTrue("Exception received" + e.toString(), false);
+				fail("Exception received" + e.toString());
 			} catch (InterruptedException e) {
 				System.out.println("Exception: " + e.toString());
-				assertTrue("Exception received" + e.toString(), false);
+				fail("Exception received" + e.toString());
 			} catch (ExecutionException e) {
 				System.out.println("Exception: " + e.toString());
 				e.printStackTrace();
-				assertTrue("Exception received" + e.toString(), false);
+				fail("Exception received" + e.toString());
 			}
 		}
 	}
@@ -390,14 +391,14 @@ public class ChatManagerImprovement5 {
 				System.out.println("The returned value from the Thread is: "+ Arrays.asList(returnedValues[i].getName()).toString());
 			} catch (ConcurrentModificationException e) {
 				System.out.println("Exception: " + e.toString());
-				assertTrue("Exception received" + e.toString(), false);
+				fail("Exception received" + e.toString());
 			} catch (InterruptedException e) {
 				System.out.println("Exception: " + e.toString());
-				assertTrue("Exception received" + e.toString(), false);
+				fail("Exception received" + e.toString());
 			} catch (ExecutionException e) {
 				System.out.println("Exception: " + e.toString());
 				e.printStackTrace();
-				assertTrue("Exception received" + e.toString(), false);
+				fail("Exception received" + e.toString());
 			}
 		}
 		return returnedValues;
