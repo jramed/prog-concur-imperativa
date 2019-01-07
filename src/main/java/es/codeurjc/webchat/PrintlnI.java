@@ -16,10 +16,11 @@ public class PrintlnI {
 	
 	public static void reset() 
 	{
-		for (int i = 0; i<spaces.size(); i++)
+		/*for (int i = 0; i<spaces.size(); i++)
 		{
 			spaces.remove(i);
-		}
+		}*/
+		spaces.clear();
 	}
 
 	public static void printlnI(String text, String threadName)
