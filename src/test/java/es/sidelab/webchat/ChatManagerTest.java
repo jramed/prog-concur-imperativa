@@ -20,7 +20,6 @@ import org.junit.Test;
 import es.codeurjc.webchat.Chat;
 import es.codeurjc.webchat.ChatManager;
 import es.codeurjc.webchat.User;
-import es.codeurjc.webchat.PrintlnI;
 
 public class ChatManagerTest {
 
@@ -40,7 +39,6 @@ public class ChatManagerTest {
 		for (int i = 0; i < numThreads; ++i) {
 			final int count = i;
 			completionService.submit(()->simulateUser(count, chatName, chatManager));
-			PrintlnI.initPerThread();
 		}
 
 
@@ -75,8 +73,6 @@ public class ChatManagerTest {
 			assertTrue("The method 'newChat' should be invoked with "+Arrays.asList(valuesToCheck).toString()+" , but the value is "
 					+ Arrays.asList(returnedValues[i]).toString(), Arrays.equals(returnedValues[i], valuesToCheck));
 		}
-
-		PrintlnI.reset();
 	}
 
 
@@ -93,9 +89,6 @@ public class ChatManagerTest {
 				else {
 					chatName[count] = chat.getName();
 				}
-
-				PrintlnI.printlnI("TestUser class for user: " + this.name +", new chat created: "+chat.getName() +" for thread number: " +count, "");
-				PrintlnI.printlnI("TestUser class for user: " + this.name + chatName[count], "");
 			}
 		};
 
@@ -119,8 +112,7 @@ public class ChatManagerTest {
 	@Test
 	public void newUserInChat() throws InterruptedException, TimeoutException {
 
-		System.out.println("==============NEW test=====================");
-		PrintlnI.initPerThread();
+		System.out.println("==============NEW test newUserInChat=====================");
 		ChatManager chatManager = new ChatManager(5);
 
 		final String[] newUser = new String[1];
@@ -128,7 +120,6 @@ public class ChatManagerTest {
 		TestUser user1 = new TestUser("user1") {
 			@Override
 			public void newUserInChat(Chat chat, User user) {
-				PrintlnI.printlnI("Received notification from user: "+user.getName(),"");
 				newUser[0] = user.getName();
 			}
 		};
@@ -147,7 +138,6 @@ public class ChatManagerTest {
 		//that must be created, the sleep is necessary to give room enough to
 		//the new thread to be created and does it work.
 		Thread.sleep(550);
-		PrintlnI.reset();
 		assertTrue("Notified new user '" + newUser[0] + "' is not equal than user name 'user2'",
 				"user2".equals(newUser[0]));
 	}

@@ -21,7 +21,6 @@ import org.junit.Test;
 
 import es.codeurjc.webchat.Chat;
 import es.codeurjc.webchat.ChatManager;
-import es.codeurjc.webchat.PrintlnI;
 
 public class ChatManagerChatCreationTimeOutTest {
 
@@ -39,14 +38,11 @@ public class ChatManagerChatCreationTimeOutTest {
 		ExecutorService executor = Executors.newFixedThreadPool(numThreads);
 		CompletionService<String> completionService = new ExecutorCompletionService<>(executor);
 
-		PrintlnI.initPerThread();
-
 		long startTime = System.currentTimeMillis();
 		//Create a thread per user to test concurrent chat creation.
 
 		for (int i = 0; i < numThreads; ++i) {
 			final int count = i;
-			PrintlnI.initPerThread();
 			completionService.submit(()->checkTimeoutWaitingForChatCreation(count, chatManager, numThreads));
 		}
 
@@ -57,12 +53,8 @@ public class ChatManagerChatCreationTimeOutTest {
 		executor.awaitTermination(10, TimeUnit.SECONDS);
 
 		long endTime = System.currentTimeMillis();
-		long difference = endTime-startTime;
-		PrintlnI.printlnI("startTime: "+startTime+ " endTime: "+endTime+" difference: "+ difference ,"");
 		int threshold = 3500;
 		assertTrue("The elapse time between end time "+endTime+" and start time "+startTime+ " is bigger than "+threshold, endTime-startTime < threshold);
-
-		PrintlnI.reset();
 	}
 
 	private void serviceInvocation(int numThreads, CompletionService<String> completionService) {
@@ -106,14 +98,11 @@ public class ChatManagerChatCreationTimeOutTest {
 		ExecutorService executor = Executors.newFixedThreadPool(numThreads);
 		CompletionService<String> completionService = new ExecutorCompletionService<>(executor);
 
-		PrintlnI.initPerThread();
-
 		long startTime = System.currentTimeMillis();
 		//Create a thread per user to test concurrent chat creation.
 
 		for (int i = 0; i < numThreads; ++i) {
 			final int count = i;
-			PrintlnI.initPerThread();
 			completionService.submit(()->checkChatCreationAfterWaiting(count, chatManager, numThreads));
 		}
 
@@ -141,12 +130,8 @@ public class ChatManagerChatCreationTimeOutTest {
 		executor.awaitTermination(10, TimeUnit.SECONDS);
 
 		long endTime = System.currentTimeMillis();
-		long difference = endTime-startTime;
-		PrintlnI.printlnI("startTime: "+startTime+ " endTime: "+endTime+" difference: "+ difference ,"");
 		int threshold = 7000;
 		assertTrue("The elapse time between end time "+endTime+" and start time "+startTime+ " is bigger than "+threshold, endTime-startTime < threshold);
-
-		PrintlnI.reset();
 	}
 
 	private String checkChatCreationAfterWaiting(int count, ChatManager chatManager,
@@ -172,14 +157,11 @@ public class ChatManagerChatCreationTimeOutTest {
 		ExecutorService executor = Executors.newFixedThreadPool(numThreads);
 		CompletionService<String> completionService = new ExecutorCompletionService<>(executor);
 
-		PrintlnI.initPerThread();
-
 		long startTime = System.currentTimeMillis();
 		//Create a thread per user to test concurrent chat creation.
 
 		for (int i = 0; i < numThreads; ++i) {
 			final int count = i;
-			PrintlnI.initPerThread();
 			completionService.submit(()->checkSimultaneousChatCreationRemoval(count, chatManager, numThreads));
 		}
 
@@ -190,12 +172,8 @@ public class ChatManagerChatCreationTimeOutTest {
 		executor.awaitTermination(10, TimeUnit.SECONDS);
 
 		long endTime = System.currentTimeMillis();
-		long difference = endTime-startTime;
-		PrintlnI.printlnI("startTime: "+startTime+ " endTime: "+endTime+" difference: "+ difference ,"");
 		int threshold = 7000;
 		assertTrue("The elapse time between end time "+endTime+" and start time "+startTime+ " is bigger than "+threshold, endTime-startTime < threshold);
-
-		PrintlnI.reset();
 	}
 
 	private String checkSimultaneousChatCreationRemoval(int count, ChatManager chatManager,

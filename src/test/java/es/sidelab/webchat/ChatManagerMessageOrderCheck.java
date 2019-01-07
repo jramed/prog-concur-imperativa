@@ -19,7 +19,6 @@ import org.junit.Test;
 
 import es.codeurjc.webchat.Chat;
 import es.codeurjc.webchat.ChatManager;
-import es.codeurjc.webchat.PrintlnI;
 import es.codeurjc.webchat.User;
 
 public class ChatManagerMessageOrderCheck {
@@ -39,14 +38,12 @@ public class ChatManagerMessageOrderCheck {
 		final Boolean[] hasUserSentReceiveMsgInOrder = new Boolean[numThreads];
 		Arrays.fill(hasUserSentReceiveMsgInOrder, false);
 
-		PrintlnI.initPerThread();
 		Chat chat = chatManager.newChat("Chat", 5, TimeUnit.SECONDS);
 		msgInOrderExchanger = new Exchanger<Boolean>();
 
 		for (int i = 0; i < numThreads; i++)
 		{
 			final int count = i;
-			PrintlnI.initPerThread();
 			completionService.submit(()->checkMsgOrderTest(count, hasUserSentReceiveMsgInOrder, chatManager, chat, numThreads));
 		}
 
@@ -56,15 +53,11 @@ public class ChatManagerMessageOrderCheck {
 
 		executor.awaitTermination(10, TimeUnit.SECONDS);
 
-		PrintlnI.printlnI(Arrays.asList(hasUserSentReceiveMsgInOrder).toString(),"");
-
 		Boolean[] valuesToCheck = new Boolean[numThreads];
 		Arrays.fill(valuesToCheck, true);
 
 		assertTrue("Messages sent for users "+Arrays.asList(valuesToCheck).toString()+" , but the value is "
 				+ Arrays.asList(hasUserSentReceiveMsgInOrder).toString(), Arrays.equals(hasUserSentReceiveMsgInOrder, valuesToCheck));
-
-		PrintlnI.reset();
 	}
 
 
@@ -96,7 +89,6 @@ public class ChatManagerMessageOrderCheck {
 		TestUser user = new TestUser("user"+count) {
 			int previousReceivedMsg = 0;
 			public void newMessage(Chat chat, User user, String message) {
-				PrintlnI.printlnI("User: " + this.name +", new message: "+message, "");
 				boolean isInOrder = false;
 				try {
 					if (previousReceivedMsg == Integer.valueOf(message)-1)
@@ -110,16 +102,12 @@ public class ChatManagerMessageOrderCheck {
 					msgInOrderExchanger.exchange(isInOrder,1000L, TimeUnit.MILLISECONDS);
 				} catch (InterruptedException intExcep)
 				{
-					PrintlnI.printlnI("Exception received: " + intExcep.toString(),"");
 					intExcep.printStackTrace();
 				}
 				catch (TimeoutException timeOutExcep)
 				{
-					PrintlnI.printlnI("Exception received: " + timeOutExcep.toString(),"");
 					timeOutExcep.printStackTrace();
 				}
-
-				PrintlnI.printlnI("User: " + this.name + " "+isInOrder, "");
 			}
 		};
 
@@ -138,15 +126,12 @@ public class ChatManagerMessageOrderCheck {
 				chat.sendMessage(user, String.valueOf(i));
 				//This could be also done with a queue, producer/consumer schema 
 				Boolean result = msgInOrderExchanger.exchange(null,1000L, TimeUnit.MILLISECONDS);
-				PrintlnI.printlnI(result+" received from the exchange","");
 				if ( false == result )
 				{
-					PrintlnI.printlnI("False received from the exchange","");
 					hasUserSentReceiveMsgInOrder[count] = false;
 					return user.getName();
 				} 
 			}
-			PrintlnI.printlnI("After the for","");
 			hasUserSentReceiveMsgInOrder[count] = true;
 		}
 

@@ -19,7 +19,6 @@ import org.junit.Test;
 
 import es.codeurjc.webchat.Chat;
 import es.codeurjc.webchat.ChatManager;
-import es.codeurjc.webchat.PrintlnI;
 import es.codeurjc.webchat.User;
 
 public class ChatManagerParallelNotificationsTest {
@@ -39,7 +38,6 @@ public class ChatManagerParallelNotificationsTest {
 		final Boolean[] hasUserSentReceiveMsg = new Boolean[numThreads];
 		Arrays.fill(hasUserSentReceiveMsg, false);
 
-		PrintlnI.initPerThread();
 		Chat chat = chatManager.newChat("Chat", 5, TimeUnit.SECONDS);
 
 		long startTime = System.currentTimeMillis();
@@ -47,7 +45,6 @@ public class ChatManagerParallelNotificationsTest {
 		for (int i = 0; i < numThreads; i++)
 		{
 			final int count = i;
-			PrintlnI.initPerThread();
 			completionService.submit(()->simulateUserParallelTest(count, hasUserSentReceiveMsg, chatManager, chat, numThreads));
 		}
 
@@ -58,11 +55,8 @@ public class ChatManagerParallelNotificationsTest {
 		executor.awaitTermination(10, TimeUnit.SECONDS);
 
 		long endTime = System.currentTimeMillis();
-		long difference = endTime-startTime;
-		PrintlnI.printlnI("startTime: "+startTime+ " endTime: "+endTime+" difference: "+ difference ,"");
 		int threshold = 1500;
 		assertTrue("The elapse time between end time "+endTime+" and start time "+startTime+ " is bigger than "+threshold, endTime-startTime <= threshold);
-		PrintlnI.printlnI(Arrays.asList(hasUserSentReceiveMsg).toString(),"");
 
 		//Check 
 		Boolean[] valuesToCheck = new Boolean[numThreads];
@@ -73,8 +67,6 @@ public class ChatManagerParallelNotificationsTest {
 
 		assertTrue("Messages sent for users "+Arrays.asList(valuesToCheck).toString()+" , but the value is "
 				+ Arrays.asList(hasUserSentReceiveMsg).toString(), Arrays.equals(hasUserSentReceiveMsg, valuesToCheck));
-
-		PrintlnI.reset();
 	}
 
 
@@ -107,18 +99,13 @@ public class ChatManagerParallelNotificationsTest {
 
 		TestUser user = new TestUser("user"+count) {
 			public void newMessage(Chat chat, User user, String message) {
-				PrintlnI.printlnI("User: " + this.name +", new message: "+message +" for thread number: " +count, "");
 				try {
 					Thread.sleep(1000);
 					hasUserSentReceiveMsg[count] = true;
 				} catch (InterruptedException intExcep)
 				{
-					PrintlnI.printlnI("Exception received: " + intExcep.toString(),"");
 					intExcep.printStackTrace();
 				}
-
-				PrintlnI.printlnI("User: " + this.name +", new message: "+message +" for thread number: " +count, "");
-				PrintlnI.printlnI("User: " + this.name + " "+hasUserSentReceiveMsg[count], "");
 
 				latch.countDown();
 			}
@@ -139,7 +126,7 @@ public class ChatManagerParallelNotificationsTest {
 			}
 			catch (InterruptedException e)
 			{
-				PrintlnI.printlnI("Exception waiting from count donw latch", "");
+				System.out.println("Exception waiting from count donw latch");
 			}
 		}
 

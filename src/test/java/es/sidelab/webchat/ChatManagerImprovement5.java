@@ -25,7 +25,6 @@ import org.junit.Test;
 
 import es.codeurjc.webchat.Chat;
 import es.codeurjc.webchat.ChatManager;
-import es.codeurjc.webchat.PrintlnI;
 import es.codeurjc.webchat.User;
 
 public class ChatManagerImprovement5 {
@@ -47,12 +46,9 @@ public class ChatManagerImprovement5 {
 		final Boolean[] hasUserReceiveNotifNewChat = new Boolean[numThreads];
 		Arrays.fill(hasUserReceiveNotifNewChat, false);
 
-		PrintlnI.initPerThread();
-
 		long startTime = System.currentTimeMillis();
 		for (int i = 0; i < numThreads; ++i) {
 			final int count = i;
-			PrintlnI.initPerThread();
 			completionService.submit(()->checkMsgInChatCreation(count, chatManager, hasUserReceiveNotifNewChat, numThreads));
 		}
 
@@ -63,20 +59,14 @@ public class ChatManagerImprovement5 {
 		executor.awaitTermination(10, TimeUnit.SECONDS);
 
 		long endTime = System.currentTimeMillis();
-		long difference = endTime-startTime;
-		PrintlnI.printlnI("startTime: "+startTime+ " endTime: "+endTime+" difference: "+ difference ,"");
 		int threshold = 1500;
 		assertTrue("The elapse time between end time "+endTime+" and start time "+startTime+ " is bigger than "+threshold, endTime-startTime < threshold);
-
-		PrintlnI.printlnI(Arrays.asList(hasUserReceiveNotifNewChat).toString(),"");
 
 		Boolean[] valuesToCheck = new Boolean[numThreads];
 		Arrays.fill(valuesToCheck, true);
 
 		assertTrue("Messages sent for users "+Arrays.asList(valuesToCheck).toString()+" , but the value is "
 				+ Arrays.asList(hasUserReceiveNotifNewChat).toString(), Arrays.equals(hasUserReceiveNotifNewChat, valuesToCheck));
-
-		PrintlnI.reset();
 	}
 
 
@@ -108,15 +98,12 @@ public class ChatManagerImprovement5 {
 
 		TestUser user = new TestUser("user"+count) {
 			public void newChat(Chat chat) {
-				PrintlnI.printlnI("User: " + this.name +", new Chat has been created:" + chat.getName(), "");
 				try {
 					Thread.sleep(500);
 					hasUserReceiveNotif[count] =  true;
-					PrintlnI.printlnI("User: " + this.name + " "+hasUserReceiveNotif[count], "");
 					latchCreateChat.countDown();
 				} catch (InterruptedException intExcep)
 				{
-					PrintlnI.printlnI("Exception received: " + intExcep.toString(),"");
 					intExcep.printStackTrace();
 				}
 			}
@@ -151,12 +138,9 @@ public class ChatManagerImprovement5 {
 		final Boolean[] hasUserReceiveNotifNewChat = new Boolean[numThreads];
 		Arrays.fill(hasUserReceiveNotifNewChat, false);
 
-		PrintlnI.initPerThread();
-
 		long startTime = System.currentTimeMillis();
 		for (int i = 0; i < numThreads; ++i) {
 			final int count = i;
-			PrintlnI.initPerThread();
 			completionService.submit(()->checkMsgInChatRemoval(count, chatManager, hasUserReceiveNotifNewChat, numThreads));
 		}
 
@@ -167,20 +151,15 @@ public class ChatManagerImprovement5 {
 		executor.awaitTermination(10, TimeUnit.SECONDS);
 
 		long endTime = System.currentTimeMillis();
-		long difference = endTime-startTime;
-		PrintlnI.printlnI("startTime: "+startTime+ " endTime: "+endTime+" difference: "+ difference ,"");
+
 		int threshold = 1500;
 		assertTrue("The elapse time between end time "+endTime+" and start time "+startTime+ " is bigger than "+threshold, endTime-startTime < threshold);
-
-		PrintlnI.printlnI(Arrays.asList(hasUserReceiveNotifNewChat).toString(),"");
 
 		Boolean[] valuesToCheck = new Boolean[numThreads];
 		Arrays.fill(valuesToCheck, true);
 
 		assertTrue("Messages sent for users "+Arrays.asList(valuesToCheck).toString()+" , but the value is "
 				+ Arrays.asList(hasUserReceiveNotifNewChat).toString(), Arrays.equals(hasUserReceiveNotifNewChat, valuesToCheck));
-
-		PrintlnI.reset();
 	}
 
 
@@ -189,7 +168,6 @@ public class ChatManagerImprovement5 {
 
 		TestUser user = new TestUser("user"+count) {
 			public void chatClosed(Chat chat) {
-				PrintlnI.printlnI("User: " + this.name +", Chat: " + chat.getName() + " has been closed", "");
 				try {
 					Thread.sleep(500);
 					if (chat.getName() == "Chat") {
@@ -197,11 +175,9 @@ public class ChatManagerImprovement5 {
 					} else {
 						hasUserReceiveNotif[count] =  false;
 					}
-					PrintlnI.printlnI("User: " + this.name + " "+hasUserReceiveNotif[count], "");
 					latchCloseChat.countDown();
 				} catch (InterruptedException intExcep)
 				{
-					PrintlnI.printlnI("Exception received: " + intExcep.toString(),"");
 					intExcep.printStackTrace();
 				}
 			}
@@ -242,12 +218,9 @@ public class ChatManagerImprovement5 {
 		//for a given user.
 		ConcurrentMap<String, CountDownLatch> controlNotifPerUser = new ConcurrentHashMap<>();
 
-		PrintlnI.initPerThread();
-
 		long startTime = System.currentTimeMillis();
 		for (int i = 0; i < numThreads; ++i) {
 			final int count = i;
-			PrintlnI.initPerThread();
 			completionService.submit(()->checkMsgWhenUserAddToChat(count, chatManager, newUserInChatReceivedNotif, numThreads, controlNotifPerUser));
 		}
 
@@ -259,20 +232,14 @@ public class ChatManagerImprovement5 {
 		executor.awaitTermination(10, TimeUnit.SECONDS);
 
 		long endTime = System.currentTimeMillis();
-		long difference = endTime-startTime;
-		PrintlnI.printlnI("startTime: "+startTime+ " endTime: "+endTime+" difference: "+ difference ,"");
 		int threshold = 2000;
 		assertTrue("The elapse time between end time "+endTime+" and start time "+startTime+ " is bigger than "+threshold, endTime-startTime < threshold);
-
-		//Thread.sleep(2000);
-		PrintlnI.printlnI(Arrays.asList(newUserInChatReceivedNotif).toString(),"");
 
 		assertThat("One user with 3 notifications",newUserInChatReceivedNotif.values(),hasItem(3));
 		assertThat("One user with 2 notifications",newUserInChatReceivedNotif.values(),hasItem(2));
 		//in some test could happen that two users have one notification. That is right.
 		assertThat("At least one user with 1 notifications",newUserInChatReceivedNotif.values(),hasItem(1));
 
-		PrintlnI.reset();
 		for (User u: returnedValues) {
 			chatManager.removeUser(u);
 		}
@@ -285,9 +252,6 @@ public class ChatManagerImprovement5 {
 
 		TestUser user = new TestUser("user"+count) {
 			public void newUserInChat(Chat chat, User user) {
-				PrintlnI.printlnI("TestUSer: "+this.name + ": New user " + user.getName() +
-						" in chat " + chat.getName() +
-						" Number of notif: " + newUSerInChatMsgs.get(this.getName()),"");
 				try {
 					//to simulate a dealy in the handling of the notification
 					Thread.sleep(500);
@@ -297,22 +261,17 @@ public class ChatManagerImprovement5 {
 						//to handle the new user in chat notification for an user
 						newUSerInChatMsgs.replace(this.getName(), value+1);
 					}
-					PrintlnI.printlnI("TestUser: " + this.name + " value: " +
-							newUSerInChatMsgs.get(this.getName()), "");
 				} catch (InterruptedException intExcep)
 				{
-					PrintlnI.printlnI("Exception received: " + intExcep.toString(),"");
 					intExcep.printStackTrace();
 				}
 				controlNotifPerUser.get(this.getName()).countDown();
-				PrintlnI.printlnI("CountDown for user " + this.getName(),"");
 			}
 
 		};
 
 		if (count+1 != numThreads) {
 			controlNotifPerUser.putIfAbsent(user.getName(), new CountDownLatch(numThreads-count-1));
-			PrintlnI.printlnI("Set CountDown for user " + user.getName()+ " with value: " + (numThreads-count-1),"");
 		}
 		chatManager.newUser(user);
 
@@ -325,8 +284,6 @@ public class ChatManagerImprovement5 {
 		chat.addUser(user);
 		if (count+1 != numThreads) {
 			controlNotifPerUser.get(user.getName()).await(2000L, TimeUnit.MILLISECONDS);
-			PrintlnI.printlnI("Finished countdown for user " + user.getName() +
-					" with value: " +controlNotifPerUser.get(user.getName()).getCount(),"");
 		}
 		chat.removeUser(user);
 		return user;
@@ -336,7 +293,6 @@ public class ChatManagerImprovement5 {
 	public void removeUserFromChatCheckMsgReception() throws InterruptedException, TimeoutException, ExecutionException {
 
 		System.out.println("==============NEW test removeUserFromChatCheckMsgReception=====================");
-		// Crear el chat Manager
 		final ChatManager chatManager = new ChatManager(5);
 
 		int numThreads = 4;
@@ -348,12 +304,9 @@ public class ChatManagerImprovement5 {
 		//for a given user.
 		ConcurrentMap<String, CountDownLatch> controlNotifPerUser = new ConcurrentHashMap<>();
 
-		PrintlnI.initPerThread();
-
 		long startTime = System.currentTimeMillis();
 		for (int i = 0; i < numThreads; ++i) {
 			final int count = i;
-			PrintlnI.initPerThread();
 			completionService.submit(()->checkMsgWhenUserRemoveFromChat(count, chatManager, removeUserFromChatReceivedNotif, numThreads, controlNotifPerUser));
 		}
 
@@ -364,20 +317,14 @@ public class ChatManagerImprovement5 {
 		executor.awaitTermination(10, TimeUnit.SECONDS);
 
 		long endTime = System.currentTimeMillis();
-		long difference = endTime-startTime;
-		PrintlnI.printlnI("startTime: "+startTime+ " endTime: "+endTime+" difference: "+ difference ,"");
 		int threshold = 2000;
 		assertTrue("The elapse time between end time "+endTime+" and start time "+startTime+ " is bigger than "+threshold, endTime-startTime < threshold);
-
-		//Thread.sleep(2000);
-		PrintlnI.printlnI(Arrays.asList(removeUserFromChatReceivedNotif).toString(),"");
 
 		assertThat("At least one user with 1 notifications",removeUserFromChatReceivedNotif.values(),everyItem(is(1)));
 
 		for (User u: returnedValues) {
 			chatManager.removeUser(u);
 		}
-		PrintlnI.reset();
 	}
 
 
@@ -410,9 +357,6 @@ public class ChatManagerImprovement5 {
 
 		TestUser user = new TestUser("user"+count) {
 			public void userExitedFromChat(Chat chat, User user) {
-				PrintlnI.printlnI("TestUSer: "+this.name + ": existed user " + user.getName() +
-						" from chat " + chat.getName() +
-						" Number of notif: " + removeUserFromChatMsgs.get(this.getName()),"");
 				try {
 					//to simulate a dealy in the handling of the notification
 					Thread.sleep(500);
@@ -422,15 +366,11 @@ public class ChatManagerImprovement5 {
 						//to handle the new user in chat notification for an user
 						removeUserFromChatMsgs.replace(this.getName(), value+1);
 					}
-					PrintlnI.printlnI("TestUser: " + this.name + " value: " +
-							removeUserFromChatMsgs.get(this.getName()), "");
 				} catch (InterruptedException intExcep)
 				{
-					PrintlnI.printlnI("Exception received: " + intExcep.toString(),"");
 					intExcep.printStackTrace();
 				}
 				controlNotifPerUser.get(this.getName()).countDown();
-				PrintlnI.printlnI("CountDown for user " + this.getName(),"");
 			}
 
 		};
@@ -438,7 +378,6 @@ public class ChatManagerImprovement5 {
 		if (count+1 != numThreads) {
 			int countDown = 1;
 			controlNotifPerUser.putIfAbsent(user.getName(), new CountDownLatch(countDown));
-			PrintlnI.printlnI("Set CountDown for user " + user.getName()+ " with value: "+ countDown,"");
 		}
 		chatManager.newUser(user);
 
@@ -454,8 +393,6 @@ public class ChatManagerImprovement5 {
 		}
 		if (count+1 != numThreads) {
 			controlNotifPerUser.get(user.getName()).await(2000L, TimeUnit.MILLISECONDS);
-			PrintlnI.printlnI("Finished countdown for user " + user.getName() +
-					" with value: " +controlNotifPerUser.get(user.getName()).getCount(),"");
 		}
 		return user;
 	}
@@ -465,7 +402,6 @@ public class ChatManagerImprovement5 {
 	public void sendMsgToUsersInChat() throws InterruptedException, TimeoutException, ExecutionException {
 
 		System.out.println("==============NEW test sendMsgToUsersInaChat=====================");
-		// Crear el chat Manager
 		final ChatManager chatManager = new ChatManager(5);
 
 		int numThreads = 4;
@@ -477,12 +413,9 @@ public class ChatManagerImprovement5 {
 		//for a given user.
 		ConcurrentMap<String, CountDownLatch> controlNotifPerUser = new ConcurrentHashMap<>();
 
-		PrintlnI.initPerThread();
-
 		long startTime = System.currentTimeMillis();
 		for (int i = 0; i < numThreads; ++i) {
 			final int count = i;
-			PrintlnI.initPerThread();
 			completionService.submit(()->checkMsgSentToOtherUsersInChat(count, chatManager, userReceptionMsg, numThreads, controlNotifPerUser));
 		}
 
@@ -493,16 +426,10 @@ public class ChatManagerImprovement5 {
 		executor.awaitTermination(10, TimeUnit.SECONDS);
 
 		long endTime = System.currentTimeMillis();
-		long difference = endTime-startTime;
-		PrintlnI.printlnI("startTime: "+startTime+ " endTime: "+endTime+" difference: "+ difference ,"");
 		int threshold = 1500;
 		assertTrue("The elapse time between end time "+endTime+" and start time "+startTime+ " is bigger than "+threshold, endTime-startTime < threshold);
 
-		PrintlnI.printlnI(Arrays.asList(userReceptionMsg).toString(),"");
-
 		assertThat("At least one user with 1 notifications",userReceptionMsg.values(),everyItem(is(1)));
-
-		PrintlnI.reset();
 	}
 
 	private String checkMsgSentToOtherUsersInChat(int count, ChatManager chatManager,
@@ -511,10 +438,6 @@ public class ChatManagerImprovement5 {
 
 		TestUser user = new TestUser("user"+count) {
 			public void newMessage(Chat chat, User user, String message) {
-				PrintlnI.printlnI("TestUSer: "+this.name + ": msg received from user " + user.getName() +
-						" in chat " + chat.getName() +
-						" Number of msgs: " + newMsgReceived.get(this.getName()) +
-						" msg received: " + message,"");
 				try {
 					//to simulate a delay in the handling of the notification
 					Thread.sleep(500);
@@ -524,15 +447,11 @@ public class ChatManagerImprovement5 {
 						//to handle the new user in chat notification for an user
 						newMsgReceived.replace(this.getName(), value+1);
 					}
-					PrintlnI.printlnI("TestUser: " + this.name + " value: " +
-							newMsgReceived.get(this.getName()), "");
 				} catch (InterruptedException intExcep)
 				{
-					PrintlnI.printlnI("Exception received: " + intExcep.toString(),"");
 					intExcep.printStackTrace();
 				}
 				controlNotifPerUser.get(this.getName()).countDown();
-				PrintlnI.printlnI("CountDown for user " + this.getName(),"");
 			}
 
 		};
@@ -540,7 +459,6 @@ public class ChatManagerImprovement5 {
 		if (count+1 != numThreads) {
 			int countDown = 1;
 			controlNotifPerUser.putIfAbsent(user.getName(), new CountDownLatch(countDown));
-			PrintlnI.printlnI("Set CountDown for user " + user.getName()+ " with value: " + countDown,"");
 		}
 		chatManager.newUser(user);
 
@@ -552,8 +470,6 @@ public class ChatManagerImprovement5 {
 		Thread.sleep(count*100);
 		if (count+1 != numThreads) {
 			controlNotifPerUser.get(user.getName()).await(2000L, TimeUnit.MILLISECONDS);
-			PrintlnI.printlnI("Finished countdown for user " + user.getName() +
-					" with value: " +controlNotifPerUser.get(user.getName()).getCount(),"");
 		} else {
 			chat.sendMessage(user, "message from "+user.getName());
 		}
