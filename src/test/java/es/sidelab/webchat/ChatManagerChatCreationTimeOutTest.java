@@ -3,6 +3,7 @@ package es.sidelab.webchat;
 import static org.hamcrest.CoreMatchers.containsString;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.util.Arrays;
 import java.util.ConcurrentModificationException;
@@ -49,24 +50,7 @@ public class ChatManagerChatCreationTimeOutTest {
 			completionService.submit(()->checkTimeoutWaitingForChatCreation(count, chatManager, numThreads));
 		}
 
-		String[] returnedValues = new String[numThreads];
-		for (int i = 0; i < numThreads; ++i) {
-			try {
-				Future<String> f = completionService.take();
-				returnedValues[i] = f.get();
-				System.out.println("The returned value from the Thread is: "+ Arrays.asList(returnedValues[i]).toString());
-			} catch (ConcurrentModificationException e) {
-				System.out.println("Exception: " + e.toString());
-				assertTrue("Exception received" + e.toString(), false);
-			} catch (InterruptedException e) {
-				System.out.println("Exception: " + e.toString());
-				assertTrue("Exception received" + e.toString(), false);
-			} catch (ExecutionException e) {
-				System.out.println("Exception: " + e.toString());
-				e.printStackTrace();
-				assertThat(e.getMessage(), containsString("java.util.concurrent.TimeoutException: Timeout waiting for chat creation. 'Time: 3 Unit: SECONDS'"));
-			}
-		}
+		serviceInvocation(numThreads, completionService);
 
 		executor.shutdown();
 
@@ -79,6 +63,27 @@ public class ChatManagerChatCreationTimeOutTest {
 		assertTrue("The elapse time between end time "+endTime+" and start time "+startTime+ " is bigger than "+threshold, endTime-startTime < threshold);
 
 		PrintlnI.reset();
+	}
+
+	private void serviceInvocation(int numThreads, CompletionService<String> completionService) {
+		String[] returnedValues = new String[numThreads];
+		for (int i = 0; i < numThreads; ++i) {
+			try {
+				Future<String> f = completionService.take();
+				returnedValues[i] = f.get();
+				System.out.println("The returned value from the Thread is: "+ Arrays.asList(returnedValues[i]).toString());
+			} catch (ConcurrentModificationException e) {
+				System.out.println("Exception: " + e.toString());
+				fail("Exception received" + e.toString());
+			} catch (InterruptedException e) {
+				System.out.println("Exception: " + e.toString());
+				fail("Exception received" + e.toString());
+			} catch (ExecutionException e) {
+				System.out.println("Exception: " + e.toString());
+				e.printStackTrace();
+				assertThat(e.getMessage(), containsString("java.util.concurrent.TimeoutException: Timeout waiting for chat creation. 'Time: 3 Unit: SECONDS'"));
+			}
+		}
 	}
 
 	private String checkTimeoutWaitingForChatCreation(int count, ChatManager chatManager,
@@ -120,14 +125,14 @@ public class ChatManagerChatCreationTimeOutTest {
 				System.out.println("The returned value from the Thread is: "+ Arrays.asList(returnedValues[i]).toString());
 			} catch (ConcurrentModificationException e) {
 				System.out.println("Exception: " + e.toString());
-				assertTrue("Exception received" + e.toString(), false);
+				fail("Exception received" + e.toString());
 			} catch (InterruptedException e) {
 				System.out.println("Exception: " + e.toString());
-				assertTrue("Exception received" + e.toString(), false);
+				fail("Exception received" + e.toString());
 			} catch (ExecutionException e) {
 				System.out.println("Exception: " + e.toString());
 				e.printStackTrace();
-				assertTrue("Exception received" + e.toString(), false);
+				fail("Exception received" + e.toString());
 			}
 		}
 
@@ -178,24 +183,7 @@ public class ChatManagerChatCreationTimeOutTest {
 			completionService.submit(()->checkSimultaneousChatCreationRemoval(count, chatManager, numThreads));
 		}
 
-		String[] returnedValues = new String[numThreads];
-		for (int i = 0; i < numThreads; ++i) {
-			try {
-				Future<String> f = completionService.take();
-				returnedValues[i] = f.get();
-				System.out.println("The returned value from the Thread is: "+ Arrays.asList(returnedValues[i]).toString());
-			} catch (ConcurrentModificationException e) {
-				System.out.println("Exception: " + e.toString());
-				assertTrue("Exception received" + e.toString(), false);
-			} catch (InterruptedException e) {
-				System.out.println("Exception: " + e.toString());
-				assertTrue("Exception received" + e.toString(), false);
-			} catch (ExecutionException e) {
-				System.out.println("Exception: " + e.toString());
-				e.printStackTrace();
-				assertThat(e.getMessage(), containsString("java.util.concurrent.TimeoutException: Timeout waiting for chat creation. 'Time: 3 Unit: SECONDS'"));
-			}
-		}
+		serviceInvocation(numThreads, completionService);
 
 		executor.shutdown();
 
