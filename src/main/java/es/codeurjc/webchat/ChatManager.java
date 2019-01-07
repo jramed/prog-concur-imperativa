@@ -66,7 +66,6 @@ public class ChatManager {
 			chatCreationLock.lock();
 			boolean mayWait = true;
 			mayWait = chats.size() == maxChats ? true :false;
-			//PrintlnI.printlnI("The chats size is: "+chats.size(), "");
 
 			//spurious wakeup control
 			while (mayWait) {
@@ -79,7 +78,6 @@ public class ChatManager {
 							+"Time: " + timeout + " Unit: " + unit + "\'");
 				}
 				mayWait = chats.size() == maxChats ? true :false;
-				PrintlnI.printlnI("Inside the While. The chats size is: "+chats.size(), "");
 			}
 			theChat = new Chat(this, name, taskPerUser);
 			obtainedChat = chats.putIfAbsent(name, theChat);
@@ -89,11 +87,10 @@ public class ChatManager {
 
 		if (null != obtainedChat )
 		{
-			PrintlnI.printlnI("Chat: "+name+" already created.","");
+			System.out.println("Chat: "+name+" already created.");
 			return obtainedChat;
 		} else {
 			isChatCreated = true;
-			PrintlnI.printlnI("Creating chat: "+name, "");
 		}
 
 		if (isChatCreated) {
@@ -160,16 +157,12 @@ public class ChatManager {
 	public void close() {}
 	
 	private String notifyNewChat(User user, Chat chat) throws InterruptedException {
-		//TimeUnit.MILLISECONDS.sleep(ThreadLocalRandom.current().nextInt(0, 500 + 1));
 		user.newChat(chat);
-		//PrintlnI.printlnI("New user "+userNew.getName()+" in chat message to user "+user.getName(),"");
 		return "New Chat "+ chat.getName()+" message for user "+user.getName();
 	}
 	
 	private String notifyClosedChat(User user, Chat chat) throws InterruptedException {
-		//TimeUnit.MILLISECONDS.sleep(ThreadLocalRandom.current().nextInt(0, 500 + 1));
 		user.chatClosed(chat);
-		//PrintlnI.printlnI("New user "+userNew.getName()+" in chat message to user "+user.getName(),"");
 		return "Closed Chat "+ chat.getName()+" message for user "+user.getName();
 	}
 }

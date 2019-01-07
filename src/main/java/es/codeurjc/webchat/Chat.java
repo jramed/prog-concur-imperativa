@@ -30,7 +30,7 @@ public class Chat {
 	public void addUser(User user) {
 		User previousUser = users.putIfAbsent(user.getName(), user);
 		if (previousUser != null) {
-			PrintlnI.printlnI("There was a previous user with the name: " + user.getName(), "");
+			System.out.println("There was a previous user with the name: " + user.getName());
 		}
 
 		for(User u : users.values()){
@@ -73,7 +73,6 @@ public class Chat {
 		for(User u : usersColl){
 			if (u != user)
 			{
-				PrintlnI.printlnI("Destination user: "+u.getName(),"");
 				taskPerUser.get(u.getName()).getCompletionServices().submit(()->sendMessageToUser(u, user, message));
 			}
 		}
@@ -94,9 +93,7 @@ public class Chat {
 	}
 
 	private String newUserInChat(User user, User userNew) throws InterruptedException {
-		//TimeUnit.MILLISECONDS.sleep(ThreadLocalRandom.current().nextInt(0, 500 + 1));
 		user.newUserInChat(this, userNew);
-		//PrintlnI.printlnI("New user "+userNew.getName()+" in chat message to user "+user.getName(),"");
 		return "New user "+userNew.getName()+" in chat to user "+user.getName();
 	}
 
