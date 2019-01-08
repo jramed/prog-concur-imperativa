@@ -22,7 +22,7 @@ public class TestUser implements User {
 
 	@Override
 	public void newChat(Chat chat) {
-		System.out.println("New chat " + chat.getName());
+		System.out.println("User: "+this.name+" New chat " + chat.getName());
 	}
 
 	@Override
