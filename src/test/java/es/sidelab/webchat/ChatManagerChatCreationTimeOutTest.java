@@ -90,7 +90,7 @@ public class ChatManagerChatCreationTimeOutTest {
 	@Test
 	public void chatCreationAfterWaitSeveralSeconds() throws InterruptedException, TimeoutException, ExecutionException {
 
-		System.out.println("==============NEW test timeoutWaitingForChatCreation=====================");
+		System.out.println("==============NEW test chatCreationAfterWaitSeveralSeconds=====================");
 		final ChatManager chatManager = new ChatManager(2);
 
 		int numThreads = 4;
@@ -138,9 +138,9 @@ public class ChatManagerChatCreationTimeOutTest {
 			int numThreads) throws InterruptedException, TimeoutException {
 		TestUser user = new TestUser("user"+count);
 
-		Thread.sleep(count*500);
+		Thread.sleep(count*100);
 		Chat chat = chatManager.newChat("Chat"+count, 3, TimeUnit.SECONDS);
-		Thread.sleep((count+1)*1000);
+		Thread.sleep((count+1)*100);
 		chat.close();
 
 		return user.getName();
@@ -181,7 +181,7 @@ public class ChatManagerChatCreationTimeOutTest {
 		TestUser user = new TestUser("user"+count);
 		TimeUnit.MILLISECONDS.sleep(ThreadLocalRandom.current().nextInt(0, 500 + 1));
 		Chat chat = chatManager.newChat("Chat"+count, 3, TimeUnit.SECONDS);
-		Thread.sleep((long) (Math.random() * 800));
+		Thread.sleep((long) (Math.random() * 900));
 		chat.close();
 
 		return user.getName();
