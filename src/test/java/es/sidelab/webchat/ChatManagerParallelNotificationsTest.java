@@ -60,10 +60,7 @@ public class ChatManagerParallelNotificationsTest {
 
 		//Check 
 		Boolean[] valuesToCheck = new Boolean[numThreads];
-		for (int i = 0; i < numThreads; i++)
-		{
-			valuesToCheck[i]=true;
-		}
+		Arrays.fill(valuesToCheck,true);
 
 		assertTrue("Messages sent for users "+Arrays.asList(valuesToCheck).toString()+" , but the value is "
 				+ Arrays.asList(hasUserSentReceiveMsg).toString(), Arrays.equals(hasUserSentReceiveMsg, valuesToCheck));
