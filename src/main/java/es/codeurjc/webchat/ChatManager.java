@@ -2,6 +2,8 @@ package es.codeurjc.webchat;
 
 import java.util.Collection;
 import java.util.Collections;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CompletionService;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -10,21 +12,19 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
-import java.util.concurrent.locks.Condition;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
 
 public class ChatManager {
 
 	private ConcurrentMap<String, Chat> chats = new ConcurrentHashMap<>();
 	private ConcurrentMap<String, User> users = new ConcurrentHashMap<>();
 	private ConcurrentMap<String, CustomPair> taskPerUser = new ConcurrentHashMap<>();
-	private int maxChats;
-	private Lock chatCreationLock = new ReentrantLock();
-	private Condition chatCreationCondition = chatCreationLock.newCondition();
+	private BlockingQueue<Boolean> chatsQueue;
 
 	public ChatManager(int maxChats) {
-		this.maxChats = maxChats;
+		this.chatsQueue = new ArrayBlockingQueue<>(maxChats);
+		for (int i = 0; i < maxChats; i++) {
+			chatsQueue.add(true);
+		}
 	}
 
 	public void newUser(User user) {
@@ -58,42 +58,22 @@ public class ChatManager {
 
 	public Chat newChat(String name, long timeout, TimeUnit unit) throws InterruptedException,
 			TimeoutException {
-		
-		boolean isChatCreated = false;
-		Chat theChat = null;
-		Chat obtainedChat = null;
-		try {
-			chatCreationLock.lock();
-			boolean mayWait = true;
-			mayWait = chats.size() == maxChats ? true :false;
 
-			//spurious wakeup control
-			while (mayWait) {
-				//this solution could make that the timeoutException delay more than timeout
-				//this could be avoided controlling the time elapses from the first previous try.
-				//The unit should be always the same and at least milliseconds
-				//It is not guarantee which thread will be awaken when the condition is signaled
-				if ( false == chatCreationCondition.await(timeout, unit)) {
-					throw new TimeoutException("Timeout waiting for chat creation. \'"
-							+"Time: " + timeout + " Unit: " + unit + "\'");
-				}
-				mayWait = chats.size() == maxChats ? true :false;
-			}
-			theChat = new Chat(this, name, taskPerUser);
-			obtainedChat = chats.putIfAbsent(name, theChat);
-		} finally {
-			chatCreationLock.unlock();
+		if (null == chatsQueue.poll(timeout, unit) ) {
+			throw new TimeoutException("Timeout waiting for chat creation. \'"
+					+"Time: " + timeout + " Unit: " + unit + "\'");
 		}
+
+		Chat theChat = new Chat(this, name, taskPerUser);
+		Chat obtainedChat = chats.putIfAbsent(name, theChat);
 
 		if (null != obtainedChat )
 		{
 			System.out.println("Chat: "+name+" already created.");
+			//If the chat was already created, return a token.
+			chatsQueue.put(true);
 			return obtainedChat;
 		} else {
-			isChatCreated = true;
-		}
-
-		if (isChatCreated) {
 			final Chat theUsedChat = theChat;
 			//this is quite similar to the code in closeChat
 			for(User u : users.values()){
@@ -106,32 +86,34 @@ public class ChatManager {
 				}
 			}
 		}
+
 		return theChat;
 	}
 
 	public void closeChat(Chat chat) {
 		//The remove operation is performed atomically
-		//does not make sense use lock because the signal is sent
-		//afterwards and between the remove and the signal could be
-		//an exception throw
 		Chat removedChat = chats.remove(chat.getName());
 		if (removedChat == null) {
 			throw new IllegalArgumentException("Trying to remove an unknown chat with name \'"
 					+ chat.getName() + "\'");
 		}
 
-		chatCreationLock.lock();
-		chatCreationCondition.signal();
-		chatCreationLock.unlock();
+		try {
+			chatsQueue.put(true);
+		} catch (InterruptedException e) {
+			//If it is interrupted while waiting, 
+			//a token is lost and the chats capacity reduced by one.
+			e.printStackTrace();
+			return;
+		}
 
 		final Chat theUsedChat = removedChat;
 		//this is quite similar to the code in newChat
 		for(User u : users.values()){
 			CustomPair pair = taskPerUser.get(u.getName());
-			CompletionService<String> completionService;
 			if (pair != null)
 			{
-				completionService = pair.getCompletionServices();
+				CompletionService<String> completionService = pair.getCompletionServices();
 				if (completionService != null)
 					completionService.submit(()->notifyClosedChat(u,theUsedChat));
 			}
