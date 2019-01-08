@@ -440,7 +440,7 @@ public class ChatManagerImprovement5 {
 			public void newMessage(Chat chat, User user, String message) {
 				try {
 					//to simulate a delay in the handling of the notification
-					Thread.sleep(500);
+					Thread.sleep(300);
 					Integer value = newMsgReceived.putIfAbsent(this.getName(), 1);
 					if ( null !=  value) {
 						//This can be done because there is just one thread
